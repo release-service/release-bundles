@@ -75,6 +75,10 @@ spec:
                 }
               }
               EOF
+
+              cat > "$(workspaces.data.path)/signRegistryAccess.txt" << EOF
+              myproduct/myrepo
+              EOF
     - name: run-task
       taskRef:
         name: rh-sign-image
@@ -95,6 +99,8 @@ spec:
           value: "http://localhost"
         - name: taskGitRevision
           value: "main"
+        - name: signRegistryAccessPath
+          value: signRegistryAccess.txt
       workspaces:
         - name: data
           workspace: tests-workspace
