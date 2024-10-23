@@ -4,13 +4,13 @@ kind: Task
 metadata:
   name: prepare-exodus-params
   labels:
-    app.kubernetes.io/version: "0.2.1"
+    app.kubernetes.io/version: "0.2.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
 spec:
   description: >-
-    Tekton task that prepares exodus configuration options from the data file
+    Tekton task that prepares exodus (CDN) configuration options from the data file
   params:
     - name: dataPath
       type: string
@@ -44,26 +44,28 @@ spec:
             exit 1
         fi
 
-        if [ $(jq '.exodus | has("env")' $DATA_FILE) == false ] ; then
-            echo "Exodus env missing in data JSON file"
+        if [ "$(jq '.cdn | has("env")' "${DATA_FILE}")" = "false" ] ; then
+            echo "CDN env missing in data JSON file"
             exit 1
         fi
 
-        EXODUS_ENV=$(jq -r '.exodus.env' $DATA_FILE)
+        EXODUS_ENV=$(jq -r '.cdn.env' "$DATA_FILE")
         EXODUS_GW_URL="https://exodus-gw.corp.redhat.com"
         EXODUS_GW_ENV="live"
         EXODUS_GW_SECRET="exodus-prod-secret"
 
-        # Check if EXODUS_ENV contains "cdn-qa"
-        if [[ "$EXODUS_ENV" == *"cdn-qa"* ]]; then
-          EXODUS_GW_SECRET="exodus-stage-secret"
-          EXODUS_GW_URL="https://exodus-gw.corp.stage.redhat.com"
-        fi
+        case "$EXODUS_ENV" in 
+          *qa*)
+            EXODUS_GW_SECRET="exodus-stage-secret"
+            EXODUS_GW_URL="https://exodus-gw.corp.stage.redhat.com"
+            ;;
+        esac
 
-        # Check if EXODUS_ENV contains "cdn-stage"
-        if [[ "$EXODUS_ENV" == *"cdn-stage"* ]]; then
-          EXODUS_GW_ENV="pre"
-        fi
+        case "$EXODUS_ENV" in
+          *stage*)
+            EXODUS_GW_ENV="pre"
+            ;;
+        esac
 
         echo -n $EXODUS_GW_SECRET > $(results.exodusGwSecret.path)
         echo -n $EXODUS_GW_URL > $(results.exodusGwUrl.path)

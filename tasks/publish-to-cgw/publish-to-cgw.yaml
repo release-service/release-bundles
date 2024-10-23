@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: publish-to-cgw
   labels:
-    app.kubernetes.io/version: "0.2.3"
+    app.kubernetes.io/version: "0.2.4"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -114,34 +114,36 @@ spec:
             Generate metadata for each file in
             content_list that starts with the component name
             """
+            shortURL_base = '/pub/cgw'
             metadata = []
+            shasum_files_processed = []
             for file in content_list:
-                matching_component = [
-                    data
-                    for data in components
-                    if file.startswith(data['name'])]
+                matching_component = None
+                for component in components:
+                    if file.startswith(component['name']):
+                        matching_component = component.copy()
+                        break
 
                 if matching_component:
                     print("Processing file: ", file)
-                    for data in matching_component:
-                        component = data.copy()
-                        component.update({
-                            'productName': productName,
-                            'productCode': productCode,
-                            'productVersionName': productVersionName,
-                            'downloadURL': generate_download_url(file),
-                            'shortURL': f"/cgw/{productCode}/{file}",
-                            'label': file,
-                        })
-                        del component['name']
-                        metadata.append({
-                            'type': 'file',
-                            'action': 'create',
-                            'metadata': {**default_values_per_component, **component}
-                        })
-
+                    matching_component.update({
+                        'productName': productName,
+                        'productCode': productCode,
+                        'productVersionName': productVersionName,
+                        'downloadURL': generate_download_url(file),
+                        'shortURL': f"{shortURL_base}/{productCode}/{productVersionName}/{file}",
+                        'label': file,
+                    })
+                    del matching_component['name']
+                    metadata.append({
+                        'type': 'file',
+                        'action': 'create',
+                        'metadata': {**default_values_per_component, **matching_component}
+                    })
                 else:
-                    if file.startswith('sha256'):
+                    if file.startswith('sha256') and file not in shasum_files_processed:
+                        shasum_files_processed.append(file)
+                        print("Processing file: ", file)
                         if file.endswith(".gpg"):
                             label = "Checksum - GPG"
                         elif file.endswith(".sig"):
@@ -157,7 +159,7 @@ spec:
                                 'productCode': productCode,
                                 'productVersionName': productVersionName,
                                 'downloadURL': generate_download_url(file),
-                                'shortURL': f"/cgw/{productCode}/{file}",
+                                'shortURL': f"{shortURL_base}/{productCode}/{productVersionName}/{file}",
                                 'label': label,
                                 **default_values_per_component
                             }
@@ -187,12 +189,15 @@ spec:
         ]
 
         try:
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
             command_output = result.stderr # using stderr to capture logged output
             print(f"Command succeeded with {command_output}")
         except subprocess.CalledProcessError as error:
-            print(f"Command failed with return code {error.returncode}")
+            print(f"Command failed with return code {error.returncode}\n")
+            print(f"CGW metadata that was passed: {metadata}\n")
             command_output = error.stderr
+            print(f" ERROR:\n{command_output}")
+            raise
 
         result_data = {"no_of_files_processed": len(metadata), 
                       "metadata_file_path": METADATA_FILE_PATH, 

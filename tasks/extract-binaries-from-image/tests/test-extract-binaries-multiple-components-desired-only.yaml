@@ -46,10 +46,10 @@ spec:
 
               cat > "$(workspaces.data.path)"/data.json << EOF
               {
-                "content-gateway": {
+                "contentGateway": {
                   "components": [
-                    {"name": "comp"},
-                    {"name": "comp2"}
+                    {"name": "comp2"},
+                    {"name": "comp3"}
                   ]
                 }
               }
