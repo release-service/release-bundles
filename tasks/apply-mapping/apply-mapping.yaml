@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: apply-mapping
   labels:
-    app.kubernetes.io/version: "1.7.3"
+    app.kubernetes.io/version: "1.8.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -62,6 +62,38 @@ spec:
             exit 0
         fi
 
+        # Function to handle incrementer logic
+        increment_tag() {
+            local tag_template="$1"
+            local repo="$2"
+
+            # Use `skopeo list-tags` to fetch all tags from the repository
+            existing_tags=$(skopeo list-tags docker://"${repo}" | jq -r '.Tags[]')
+            
+            # Remove `{{ incrementer }}` placeholder to get the version prefix for regex pattern
+            # shellcheck disable=SC2001
+            version_prefix=$(echo "${tag_template}" | sed 's/{{ incrementer }}//g')
+            tag_pattern="^${version_prefix}[0-9]+$"  # Build regex pattern dynamically
+
+            # Extract the numeric part of existing tags and find the max increment
+            max_increment=$(echo "${existing_tags}" | grep -E "${tag_pattern}" | sed -E "s/${version_prefix}//" \
+            | sort -nr | head -n1)
+
+            # Calculate the next increment (default to 1 if max_increment is empty or unset)
+            increment=$((max_increment + 1))
+
+            # Substitute `{{ incrementer }}` in the tag template with the calculated increment
+            tag="${tag_template//\{\{ incrementer \}\}/${increment}}"
+
+            # Validate the final tag format to avoid malformed tags
+            if [[ ! "${tag}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+                echo "Error: Invalid tag format after substitution: ${tag}"
+                exit 1
+            fi
+
+            echo "$tag"  # Return the final tag
+        }
+
         # Expected arguments are: [variable, substitute_map, labels_map]
         substitute() {
             variable=$1
@@ -105,7 +137,15 @@ spec:
                     exit 1
                   fi
 
-                  replacement=$(substitute "$var_name" "$substitute_map" "$labels_map")
+                  # Handle incrementer logic
+                  if [[ "$var_name" == "incrementer" ]]; then
+                      repo=$(jq -r '.repository' <<< "$component")
+                      tag=$(increment_tag "$tag" "$repo")
+                  else
+                      replacement=$(substitute "$var_name" "$substitute_map" "$labels_map")
+                      tag="${tag//"{{ *$var_name *}}"/$replacement}"
+                  fi
+
                   if [ -z "$replacement" ]; then
                       echo Error: Substitution variable unknown or empty: "$var_name" >&2
                       exit 1

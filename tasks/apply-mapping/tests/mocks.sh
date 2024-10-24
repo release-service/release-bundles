@@ -33,6 +33,21 @@ function skopeo() {
   echo Mock skopeo called with: $* >&2
   echo $* >> $(workspaces.config.path)/mock_skopeo.txt
 
+  if [[ "$*" =~ list-tags\ docker://repo1 ]]; then
+      echo '{"Tags": ["v2.0.0-4", "v2.0.0-3", "v2.0.0-2"]}'
+      return
+  fi
+
+  if [[ "$*" =~ inspect\ --no-tags\ docker://repo1 ]]; then
+      echo '{"Tags": ["v2.0.0-4", "v2.0.0-3", "v2.0.0-2"]}'
+      return
+  fi
+
+  if [[ "$*" =~ inspect\ --no-tags\ docker://repo2 ]]; then
+      echo '{"Tags": []}'
+      return
+  fi
+
   if [[ "$*" == "inspect --no-tags --override-os linux --override-arch amd64 docker://registry.io/badimage"* ]]
   then
     echo '{"Labels": {"not-a-build-date": "2024-07-29T02:17:29"}}'
