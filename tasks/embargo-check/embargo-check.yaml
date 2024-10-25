@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: embargo-check
   labels:
-    app.kubernetes.io/version: "0.4.0"
+    app.kubernetes.io/version: "0.4.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -59,12 +59,12 @@ spec:
         RC=0
 
         NUM_ISSUES=$(jq -cr '.releaseNotes.issues.fixed | length' "${DATA_FILE}")
-        for ((i = 0; i < $NUM_ISSUES; i++)); do
+        for ((i = 0; i < NUM_ISSUES; i++)); do
             issue=$(jq -c --argjson i "$i" '.releaseNotes.issues.fixed[$i]' "${DATA_FILE}")
-            server=$(jq -r '.source' <<< $issue)
-            API=$(jq -r '.[] | select(.servers[] | contains("'$server'")) | .api' <<< $SUPPORTED_ISSUE_TRACKERS)
-            API_URL="https://$(jq -r '.source' <<< $issue)/${API}/$(jq -r '.id' <<< $issue)"
-            curl --fail --output /dev/null ${API_URL}
+            server=$(jq -r '.source' <<< "$issue")
+            API=$(jq -r '.[] | select(.servers[] | contains("'"$server"'")) | .api' <<< "$SUPPORTED_ISSUE_TRACKERS")
+            API_URL="https://$(jq -r '.source' <<< "$issue")/${API}/$(jq -r '.id' <<< "$issue")"
+            curl --fail --output /dev/null "${API_URL}"
             if [ $? -ne 0 ] ; then
                 echo "${issue} is not publicly visible. Assuming it is embargoed and stopping pipelineRun execution."
                 RC=1
@@ -97,20 +97,20 @@ spec:
 
         internal-request -r "check-embargoed-cves" \
             -p cves="${CVES}" \
-            -l ${PIPELINERUN_LABEL}=$(params.pipelineRunUid) \
-            -t $(params.requestTimeout) \
+            -l ${PIPELINERUN_LABEL}="$(params.pipelineRunUid)" \
+            -t "$(params.requestTimeout)" \
             -s true \
-            > $(workspaces.data.path)/ir-result.txt || \
-            (grep "^\[" $(workspaces.data.path)/ir-result.txt | jq . && exit 1)
+            > "$(workspaces.data.path)"/ir-result.txt || \
+            (grep "^\[" "$(workspaces.data.path)"/ir-result.txt | jq . && exit 1)
 
-        internalRequest=$(awk 'NR==1{ print $2 }' $(workspaces.data.path)/ir-result.txt | xargs)
+        internalRequest=$(awk 'NR==1{ print $2 }' "$(workspaces.data.path)"/ir-result.txt | xargs)
         echo "done (${internalRequest})"
 
-        results=$(kubectl get internalrequest $internalRequest -o=jsonpath='{.status.results}')
-        if [[ "$(echo ${results} | jq -r '.result')" == "Success" ]]; then
+        results=$(kubectl get internalrequest "$internalRequest" -o=jsonpath='{.status.results}')
+        if [[ "$(echo "${results}" | jq -r '.result')" == "Success" ]]; then
           echo "No embargoed CVEs found"
         else
           echo "The following CVEs are marked as embargoed:"
-          echo "$(echo ${results} | jq -cr '.embargoed_cves')"
+          echo "${results}" | jq -cr '.embargoed_cves'
           exit 1
         fi
