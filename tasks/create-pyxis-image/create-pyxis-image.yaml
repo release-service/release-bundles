@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-pyxis-image
   labels:
-    app.kubernetes.io/version: "3.3.3"
+    app.kubernetes.io/version: "3.3.4"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -153,7 +153,7 @@ spec:
                 ORAS_ARGS=()
                 if [[ "$MEDIA_TYPE" == "application/vnd.docker.distribution.manifest.list.v2+json" ]]\
                   || [[ "$MEDIA_TYPE" == "application/vnd.oci.image.index.v1+json" ]]; then
-                  ORAS_ARGS+=("--platform $os/$arch")
+                  ORAS_ARGS+=("--platform $OS/$ARCH")
                 fi
 
                 oras manifest fetch \
