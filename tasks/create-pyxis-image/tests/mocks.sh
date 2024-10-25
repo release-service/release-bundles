@@ -9,7 +9,7 @@ function create_container_image() {
   # e.g. 0001, 0002, 0003...
   echo The image id is $(awk 'END{printf("%04i", NR)}' $(workspaces.data.path)/mock_create_container_image.txt)
 
-  if [[ "$*" != "--pyxis-url https://pyxis.preprod.api.redhat.com/ --certified false --tags "*" --is-latest false --verbose --oras-manifest-fetch /tmp/oras-manifest-fetch.json --name "*" --media-type my_media_type --digest "*" --architecture-digest "*" --architecture "*" --rh-push "* ]]
+  if [[ "$*" != "--pyxis-url https://pyxis.preprod.api.redhat.com/ --certified false --tags "*" --is-latest false --verbose --oras-manifest-fetch /tmp/oras-manifest-fetch.json --name "*" --media-type "*" --digest "*" --architecture-digest "*" --architecture "*" --rh-push "* ]]
   then
     echo Error: Unexpected call
     echo Mock create_container_image called with: $*
@@ -30,7 +30,10 @@ function cleanup_tags() {
 
 function skopeo() {
   echo $* >> $(workspaces.data.path)/mock_skopeo.txt
-  if [[ "$*" == "inspect --raw docker://"* ]] || [[ "$*" == "inspect --no-tags --override-os linux --override-arch "*" docker://"* ]]
+  if [[ "$*" == "inspect --raw docker://registry.io/oci-artifact"* ]]
+  then
+    echo '{"mediaType": "application/vnd.oci.image.index.v1+json"}'
+  elif [[ "$*" == "inspect --raw docker://"* ]] || [[ "$*" == "inspect --no-tags --override-os linux --override-arch "*" docker://"* ]]
   then
     echo '{"mediaType": "my_media_type"}'
   else
