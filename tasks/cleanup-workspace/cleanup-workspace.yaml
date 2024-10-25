@@ -28,7 +28,7 @@ spec:
       description: Workspace where the directory to cleanup exists
   steps:
     - name: cleanup
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       script: |
         #!/usr/bin/env bash
         set -eux

@@ -27,7 +27,7 @@ spec:
       description: Workspace where the json files are stored
   steps:
     - name: run-script
-      image: quay.io/konflux-ci/release-service-utils:6a7ca9ba0ddd70404fe2267551409925cf513132
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       script: |
         #!/usr/bin/env bash
         set -ex

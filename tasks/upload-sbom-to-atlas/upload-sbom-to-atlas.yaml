@@ -64,7 +64,7 @@ spec:
         secretName: $(params.atlasSecretName)
   steps:
     - name: gather-sboms
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       script: |
         #!/usr/bin/env bash
         set -o errexit -o pipefail -o nounset
@@ -158,7 +158,7 @@ spec:
 
     # Needs syft, which is in a different image => has to be a separate step
     - name: convert-sboms-if-needed
-      image: quay.io/konflux-ci/release-service-utils:80a575e7e12d32f866a6105827804f2f122cea73
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       script: |
         #!/usr/bin/env bash    
         set -o errexit -o pipefail -o nounset
@@ -192,7 +192,7 @@ spec:
         done
 
     - name: upload-sboms
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       volumeMounts:
         - name: atlas-secret
           mountPath: /secrets/

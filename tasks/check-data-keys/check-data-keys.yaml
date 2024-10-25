@@ -29,7 +29,7 @@ spec:
       description: The workspace where the data JSON file resides
   steps:
     - name: check-data-keys
-      image: quay.io/konflux-ci/release-service-utils:9089cafbf36bb889b4b73d8c2965613810f13736
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       args: ["$(params.systems[*])"]
       script: |
         #!/usr/bin/env bash

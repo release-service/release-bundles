@@ -108,7 +108,7 @@ spec:
         Path where the final signed content is stored in the workspace
   steps:
     - name: push-unsigned-using-oras
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       env:
         - name: QUAY_USER
           valueFrom:
@@ -173,7 +173,7 @@ spec:
         echo "Digest for windows content: $windows_digest"
         echo -n "$windows_digest" > "$(results.unsignedWindowsDigest.path)"
     - name: sign-mac-binaries
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       volumeMounts:
         - name: mac-ssh-key-vol
           mountPath: "/etc/secrets"
@@ -305,7 +305,7 @@ spec:
         # shellcheck disable=SC2029
         ssh "${SSH_OPTS[@]}" "${MAC_USER}@${MAC_HOST}" "rm -rf /tmp/$(params.pipelineRunUid)"
     - name: sign-windows-binaries
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       volumeMounts:
         - name: windows-ssh-key-vol
           mountPath: "/etc/secrets"
@@ -407,7 +407,7 @@ spec:
         # shellcheck disable=SC2029,SC2086
         ssh $SSH_OPTS "rmdir /s /q C:\\Users\\Administrator\\AppData\\Local\\Temp\\$(params.pipelineRunUid)"
     - name: generate-checksums
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       volumeMounts:
         - name: checksum-fingerprint-vol
           mountPath: "/etc/secrets_fingerprint"

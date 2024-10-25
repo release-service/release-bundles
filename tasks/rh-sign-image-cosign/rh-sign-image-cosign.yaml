@@ -29,7 +29,7 @@ spec:
       description: Workspace to read and save files
   steps:
     - name: sign-image
-      image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       env:
         - name: AWS_DEFAULT_REGION
           valueFrom:

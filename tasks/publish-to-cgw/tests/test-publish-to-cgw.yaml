@@ -18,7 +18,7 @@ spec:
           - name: data
         steps:
           - name: setup-values
-            image: quay.io/konflux-ci/release-service-utils:3826e42200d46e2bd336bc7802332190a9ebd860
+            image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
             script: |
               #!/usr/bin/env sh
               set -eux
@@ -98,7 +98,7 @@ spec:
           - name: resultDataPath
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:3826e42200d46e2bd336bc7802332190a9ebd860
+            image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
             script: |
               #!/usr/bin/env bash
               python3 <<EOF

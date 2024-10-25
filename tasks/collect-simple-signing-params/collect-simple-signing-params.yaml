@@ -34,7 +34,7 @@ spec:
       description: SSL key file name
   steps:
     - name: collect-simple-signing-params
-      image: quay.io/konflux-ci/release-service-utils:7d0135b80a47cdaa225010ea1e2dff78d057c922
+      image: quay.io/konflux-ci/release-service-utils:31c0a95a9604fd16b002b4969cfd74753d9c5e77
       env:
         - name: config_map_name
           value: $(params.config_map_name)
