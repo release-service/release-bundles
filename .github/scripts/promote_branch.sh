@@ -97,9 +97,6 @@ if [ -z "${TARGET_BRANCH}" ]; then
 fi
 if [ "${TARGET_BRANCH}" == "staging" ]; then
     SOURCE_BRANCH="development"
-    # App sre restricts what branches we can consume from, so we create duplicate branches internal and stable
-    # to fit their regex requirements
-    SRE_DUPLICATE_BRANCH="internal"
 elif [ "${TARGET_BRANCH}" == "production" ]; then
     SOURCE_BRANCH="staging"
     SRE_DUPLICATE_BRANCH="stable"
@@ -156,7 +153,9 @@ fi
 
 git checkout $SOURCE_BRANCH
 git push origin $SOURCE_BRANCH:$TARGET_BRANCH
-git push origin $SOURCE_BRANCH:$SRE_DUPLICATE_BRANCH
+if [ -v SRE_DUPLICATE_BRANCH ] ; then
+    git push origin $SOURCE_BRANCH:$SRE_DUPLICATE_BRANCH
+fi
 
 cd -
 rm -rf ${tmpDir}
