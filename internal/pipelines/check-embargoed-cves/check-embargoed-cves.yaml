@@ -1,0 +1,30 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: check-embargoed-cves
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+      Pipeline to check if any CVEs passed are embargoed
+  params:
+    - name: cves
+      type: string
+      description: |
+          String containing a space separated list of CVEs to check (e.g. 'CVE-123 CVE-234 CVE-345')
+  tasks:
+    - name: check-embargoed-cves-task
+      taskRef:
+        name: check-embargoed-cves-task
+      params:
+        - name: cves
+          value: $(params.cves)
+  results:
+    - name: result
+      value: $(tasks.check-embargoed-cves-task.results.result)
+    - name: embargoed_cves
+      value: $(tasks.check-embargoed-cves-task.results.embargoed_cves)
