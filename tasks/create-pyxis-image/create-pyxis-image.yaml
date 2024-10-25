@@ -153,7 +153,7 @@ spec:
                 ORAS_ARGS=()
                 if [[ "$MEDIA_TYPE" == "application/vnd.docker.distribution.manifest.list.v2+json" ]]\
                   || [[ "$MEDIA_TYPE" == "application/vnd.oci.image.index.v1+json" ]]; then
-                  ORAS_ARGS+=("--platform $OS/$ARCH")
+                  ORAS_ARGS+=(--platform "$OS/$ARCH")
                 fi
 
                 oras manifest fetch \
