@@ -23,6 +23,10 @@ the rh-push-to-registry-redhat-io pipeline.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 1.5.1
+* Task `publish-pyxis-repository` should only run after `apply-mapping` has completed as it depends on the `repository`
+  value
+
 ## Changes in 1.5.0
 * Only sign `registry.access*` references if required
   * Task `publish-pyxis-repository` has a new `signRegistryAccessPath` result that is passed

@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -450,6 +450,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - collect-pyxis-params
+        - apply-mapping
     - name: push-rpm-data-to-pyxis
       retries: 5
       taskRef:
