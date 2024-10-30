@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-push-to-registry-redhat-io
   labels:
-    app.kubernetes.io/version: "4.5.1"
+    app.kubernetes.io/version: "4.5.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -264,6 +264,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - push-snapshot
+        - collect-cosign-params
     - name: push-snapshot
       retries: 5
       when:
@@ -349,6 +350,7 @@ spec:
         - verify-enterprise-contract
         - apply-mapping
         - publish-pyxis-repository
+        - extract-requester-from-release
     - name: create-pyxis-image
       retries: 5
       taskRef:

@@ -20,6 +20,12 @@ Tekton pipeline to release content to registry.redhat.io registry.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 4.5.2
+* Make task order more explicit
+  * No functional change, the tasks already depended on the other tasks'
+    results, but this makes it more explicit (and Tekton PLR UI
+    is known to show incorrect order when relying on task results only)
+
 ## Changes in 4.5.1
 * Task `publish-pyxis-repository` should only run after `apply-mapping` has completed as it depends on the `repository`
   value

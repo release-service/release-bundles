@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.5.1"
+    app.kubernetes.io/version: "1.5.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -309,6 +309,7 @@ spec:
       runAfter:
         - verify-enterprise-contract
         - push-snapshot
+        - collect-cosign-params
     - name: push-snapshot
       retries: 5
       when:
@@ -398,6 +399,7 @@ spec:
         - embargo-check
         - verify-enterprise-contract
         - publish-pyxis-repository
+        - extract-requester-from-release
     - name: create-pyxis-image
       retries: 5
       taskRef:
@@ -548,7 +550,10 @@ spec:
       runAfter:
         - check-data-keys
         - embargo-check
-        - publish-pyxis-repository
+        - push-rpm-data-to-pyxis
+        - run-file-updates
+        - rh-sign-image
+        - rh-sign-image-cosign
     - name: update-cr-status
       params:
         - name: resource
