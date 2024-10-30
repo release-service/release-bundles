@@ -10,6 +10,9 @@ in place so that downstream tasks relying on the releaseNotes data can use it.
 | dataPath     | Path to the JSON string of the merged data to update                 | No       | -             |
 | snapshotPath | Path to the JSON string of the mapped Snapshot in the data workspace | No       | -             |
 
+## Changes in 2.2.3
+* Rename `components` in the CVE struct to `packages`
+
 ## Changes in 2.2.2
 * Add component association information
 

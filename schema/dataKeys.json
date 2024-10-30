@@ -226,9 +226,9 @@
                         "additionalProperties": {
                           "type": "object",
                           "properties": {
-                            "components": {
+                            "packages": {
                               "type": "array",
-                              "description": "A list of CVEs fixed e.g. [ 'pkg:golang/golang.org/x/net/http2@1.11.1' ]",
+                              "description": "A list of packages that fixed the CVE e.g. [ 'pkg:golang/golang.org/x/net/http2@1.11.1' ]",
                               "items": {
                                 "type": "string"
                               }

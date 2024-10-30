@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: populate-release-notes-images
   labels:
-    app.kubernetes.io/version: "2.2.2"
+    app.kubernetes.io/version: "2.2.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -67,7 +67,7 @@ spec:
                 cveJson=$(jq -n \
                     --arg id $(jq -r '.key' <<< $cve) \
                     --argjson packages $(jq -c '.packages' <<< $cve) \
-                    '{($id): {"components": $packages}}')
+                    '{($id): {"packages": $packages}}')
                 CVEsJson=$(jq --argjson cve "$cveJson" '.cves.fixed += $cve' <<< $CVEsJson)
             done
             # Add one entry per arch (amd64 for example)
