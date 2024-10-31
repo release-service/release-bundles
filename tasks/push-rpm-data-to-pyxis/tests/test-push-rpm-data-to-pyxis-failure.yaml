@@ -26,7 +26,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > $(workspaces.data.path)/pyxis.json << EOF
+              cat > "$(workspaces.data.path)/pyxis.json" << EOF
               {
                 "components": [
                   {

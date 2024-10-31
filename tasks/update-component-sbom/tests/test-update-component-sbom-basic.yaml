@@ -1,0 +1,43 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-update-component-sbom-basic
+spec:
+  description: |
+    Run the update-component-sbom task and verify that the update_component_sbom script is called as expected.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: run-task
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskRef:
+        name: update-component-sbom
+      params:
+        - name: dataJsonPath
+          value: "data.json"
+        - name: downloadedSbomPath
+          value: downloaded-sboms
+    - name: check-result
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - run-task
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+              
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_update.txt")" != 1 ]; then
+                echo Error: update_component_sbom was expected to be called 1 time. Actual calls:
+                cat "$(workspaces.data.path)/mock_update.txt"
+                exit 1
+              fi

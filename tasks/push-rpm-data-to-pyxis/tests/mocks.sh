@@ -20,7 +20,7 @@ function cosign() {
     SBOM_JSON='{"spdxVersion": "SPDX-2.3"}'
   fi
 
-  echo "$SBOM_JSON" > /workdir/sboms/${4}
+  echo "$SBOM_JSON" > /workspace/data/downloaded-sboms/${4}
 }
 
 function upload_rpm_data() {

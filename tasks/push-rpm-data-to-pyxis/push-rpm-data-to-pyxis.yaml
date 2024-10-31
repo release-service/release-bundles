@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-rpm-data-to-pyxis
   labels:
-    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/version: "1.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -29,19 +29,18 @@ spec:
       type: string
       description: The maximum number of images to be processed at once
       default: 4
+  results:
+    - name: sbomPath
+      description: |
+        Path to a directory that SBOM files are downloaded onto.
   workspaces:
     - name: data
-      description: The workspace where the pyxis data json file resides
-  volumes:
-    - name: workdir
-      emptyDir: {}
+      description: |
+        The workspace where the pyxis data json file resides and where sboms will be downloaded to.
   steps:
     - name: download-sbom-files
       image:
         quay.io/konflux-ci/release-service-utils:fb3aab1684422e897c2bac5acd57d5ecf42615ae
-      volumeMounts:
-        - mountPath: /workdir
-          name: workdir
       script: |
         #!/usr/bin/env bash
         set -eux
@@ -54,8 +53,9 @@ spec:
 
         NUM_COMPONENTS=$(jq '.components | length' "${PYXIS_FILE}")
 
-        mkdir /workdir/sboms
-        cd /workdir/sboms
+        SBOM_PATH="$(dirname "$(params.pyxisJsonPath)")/downloaded-sboms"
+        mkdir "$(workspaces.data.path)/${SBOM_PATH}"
+        cd "$(workspaces.data.path)/${SBOM_PATH}"
         DOCKER_CONFIG="$(mktemp -d)"
         export DOCKER_CONFIG
 
@@ -92,6 +92,8 @@ spec:
           echo "ERROR: Expected to fetch sbom for $PYXIS_IMAGES images, but only $SBOM_COUNT were saved"
           exit 1
         fi
+        
+        echo -n "${SBOM_PATH}" > "$(results.sbomPath.path)"
 
     - name: push-rpm-data-to-pyxis
       image:
@@ -107,9 +109,6 @@ spec:
             secretKeyRef:
               name: $(params.pyxisSecret)
               key: key
-      volumeMounts:
-        - mountPath: /workdir
-          name: workdir
       script: |
         #!/usr/bin/env sh
         set -eu
@@ -138,7 +137,8 @@ spec:
 
         PYXIS_FILE="$(workspaces.data.path)/$(params.pyxisJsonPath)"
 
-        cd /workdir/sboms
+        SBOM_PATH="$(dirname "$(params.pyxisJsonPath)")/downloaded-sboms"
+        cd "$(workspaces.data.path)/${SBOM_PATH}"
 
         N=$(params.concurrentLimit)  # The maximum number of images to be processed at once
         declare -a jobs=()

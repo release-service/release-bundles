@@ -1,0 +1,38 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: update-component-sbom
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Update component-level SBOM with purls with release-time info.
+  params:
+    - name: dataJsonPath
+      description: Relative path to the JSON data file in the workspace.
+      type: string
+    - name: downloadedSbomPath
+      description: |
+        Path to the directory holding previously downloaded SBOMs to be updated.
+      type: string
+  workspaces:
+    - name: data
+      description: The workspace where the SBOM files reside.
+  steps:
+    - name: update-component-sbom-purls
+      image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
+      script: |
+        #!/usr/bin/env bash
+        set -eux
+        
+        INPUT_PATH="$(workspaces.data.path)/$(params.downloadedSbomPath)"
+        
+        #update the SBOM files in place
+        update_component_sbom \
+          --data-path "$(workspaces.data.path)/$(params.dataJsonPath)" \
+          --input-path "$INPUT_PATH" \
+          --output-path "$INPUT_PATH"

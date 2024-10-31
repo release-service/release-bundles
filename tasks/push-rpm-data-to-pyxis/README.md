@@ -13,6 +13,11 @@ all repository_id strings found in rpm purl strings in the sboms.
 | server          | The server type to use. Options are 'production','production-internal,'stage-internal' and 'stage'. | Yes      | production    |
 | concurrentLimit | The maximum number of images to be processed at once                                                | Yes      | 4             |
 
+## Changes in 1.2.0
+* Change SBOM download location to a subdir of the data workspace, so that other tasks can
+  access the downloaded SBOMs. A new result `sbomPath` is added to store the path the SBOMs
+  are downloaded to.
+
 ## Changes in 1.1.0
 * Added support for SPDX sbom format
   * If sbom format is SPDX, call `upload_rpm_data`, if it's CycloneDX, call
