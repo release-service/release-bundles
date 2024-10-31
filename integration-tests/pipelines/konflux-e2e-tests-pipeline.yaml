@@ -65,7 +65,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/test-metadata/0.1/test-metadata.yaml
+            value: common/tasks/test-metadata/0.2/test-metadata.yaml
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
@@ -90,7 +90,7 @@ spec:
       when:
         - input: "$(tasks.test-metadata.results.pull-request-author)"
           operator: notin
-          values: ["red-hat-konflux"]
+          values: ["red-hat-konflux[bot]"]
       runAfter:
         - rosa-hcp-metadata
         - test-metadata
@@ -122,7 +122,7 @@ spec:
       when:
         - input: "$(tasks.test-metadata.results.pull-request-author)"
           operator: notin
-          values: ["red-hat-konflux"]
+          values: ["red-hat-konflux[bot]"]
       runAfter:
         - provision-rosa
       taskRef:
@@ -156,7 +156,7 @@ spec:
       when:
         - input: "$(tasks.test-metadata.results.pull-request-author)"
           operator: notin
-          values: ["red-hat-konflux"]
+          values: ["red-hat-konflux[bot]"]
       taskRef:
         resolver: git
         params:
@@ -195,7 +195,7 @@ spec:
       when:
         - input: "$(tasks.test-metadata.results.pull-request-author)"
           operator: notin
-          values: ["red-hat-konflux"]
+          values: ["red-hat-konflux[bot]"]
       taskRef:
         resolver: git
         params:
@@ -220,7 +220,7 @@ spec:
       when:
         - input: "$(tasks.test-metadata.results.pull-request-author)"
           operator: notin
-          values: ["red-hat-konflux"]
+          values: ["red-hat-konflux[bot]"]
       taskRef:
         resolver: git
         params:
