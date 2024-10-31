@@ -17,6 +17,9 @@ passed.
 | subdirectory        | Subdirectory inside the workspace to be used for storing the binaries      | Yes      | ""            |
 | dataPath            | Path to the JSON string of the merged data to use in the data workspace    | No       | -             |
 
+## Changes in 2.1.2
+* Fix typo in fetching DESIRED_COMPONENTS_LIST `content-gateway` -> `contentGateway`
+
 ## Changes in 2.1.1
 * Fix shellcheck/checkton linting issues in the task and tests
 

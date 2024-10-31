@@ -19,6 +19,9 @@ Tekton pipeline to sign and release Red Hat binaries to the Red Hat Developer Po
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                         | No       | -             |
 
+## Changes in 1.4.0
+* Use results from `sign-binaries` task for `push-to-cdn` and `publish-to-cgw` instead of `extract-binaries-from-image`
+
 ## Changes in 1.3.0
 * Add more params for `sign-binaries` task
 

@@ -25,8 +25,8 @@ spec:
 
               cat > $(workspaces.data.path)/data.json << EOF
               {
-                "exodus": {
-                  "env": "cdn-stage"
+                "cdn": {
+                  "env": "stage"
                 }
               }
               EOF
