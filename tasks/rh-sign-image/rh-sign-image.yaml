@@ -122,7 +122,7 @@ spec:
           )
         else
           requestType=internal-request
-          defaultRequest="hacbs-signing-pipeline"
+          defaultRequest="sign-image"
           EXTRA_ARGS=()
         fi
         request=$(jq --arg defaultRequest "${defaultRequest}" -r '.sign.request // $defaultRequest' "${DATA_FILE}")
