@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-push-to-registry-redhat-io
   labels:
-    app.kubernetes.io/version: "4.5.2"
+    app.kubernetes.io/version: "4.5.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -341,6 +341,10 @@ spec:
           value: $(params.taskGitUrl)
         - name: taskGitRevision
           value: $(params.taskGitRevision)
+        - name: pyxisServer
+          value: $(tasks.collect-pyxis-params.results.server)
+        - name: pyxisSecret
+          value: $(tasks.collect-pyxis-params.results.secret)
         - name: signRegistryAccessPath
           value: $(tasks.publish-pyxis-repository.results.signRegistryAccessPath)
       workspaces:

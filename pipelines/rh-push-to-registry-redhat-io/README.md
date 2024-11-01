@@ -20,6 +20,10 @@ Tekton pipeline to release content to registry.redhat.io registry.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 4.5.3
+* Fix the missing pyxis error on rh-push-to-registry-redhat-io
+  * Missing the pyxisServer and pyxisSecret when calling rh-sign-image task.
+
 ## Changes in 4.5.2
 * Make task order more explicit
   * No functional change, the tasks already depended on the other tasks'
