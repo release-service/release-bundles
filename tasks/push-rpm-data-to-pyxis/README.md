@@ -13,6 +13,10 @@ all repository_id strings found in rpm purl strings in the sboms.
 | server          | The server type to use. Options are 'production','production-internal,'stage-internal' and 'stage'. | Yes      | production    |
 | concurrentLimit | The maximum number of images to be processed at once                                                | Yes      | 4             |
 
+## Changes in 1.0.3
+* Updated the step image used in this task
+  * Added handling for sbom entries that do not explicitly specify the publisher.
+
 ## Changes in 1.0.2
 * Updated the base image used in this task
   * A typo in `upload_rpm_data.py` was fixed and now we should correctly save
