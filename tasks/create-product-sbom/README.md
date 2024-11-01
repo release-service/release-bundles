@@ -5,7 +5,9 @@ releaseNotes content.
 
 ## Parameters
 
-| Name             | Description                                                              | Optional | Default value |
-|------------------|--------------------------------------------------------------------------|----------|---------------|
-| dataJsonPath     | Path to the JSON string of the merged data containing the release notes  | No       | -             |
+| Name         | Description                                                             | Optional | Default value |
+| ------------ | ----------------------------------------------------------------------- | -------- | ------------- |
+| dataJsonPath | Path to the JSON string of the merged data containing the release notes | No       | -             |
 
+## Changes in 0.1.1
+* The release-service-utils image was updated to include a fix when generating name of product level SBOM - it should be based on "{product name} {product version}"

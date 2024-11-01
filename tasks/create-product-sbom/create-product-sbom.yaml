@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-product-sbom
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.1.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -23,7 +23,7 @@ spec:
       description: Relative path to the created product-level SBOM in the data workspace.
   steps:
     - name: create-sbom
-      image: quay.io/konflux-ci/release-service-utils:c7e14c3521e37e99f407e11d6f7f1b15f1b3ec01
+      image: quay.io/konflux-ci/release-service-utils:8684920ccae6c73bd9f3f23367490a9c04653a09
       script: |
         #!/usr/bin/env bash
         set -eux

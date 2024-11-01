@@ -18,7 +18,7 @@ spec:
           - name: data
         steps:
           - name: setup
-            image: quay.io/konflux-ci/release-service-utils:c7e14c3521e37e99f407e11d6f7f1b15f1b3ec01
+            image: quay.io/konflux-ci/release-service-utils:8684920ccae6c73bd9f3f23367490a9c04653a09
             script: |
               #!/usr/bin/env sh
               set -eux
@@ -71,14 +71,14 @@ spec:
           - name: data
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:c7e14c3521e37e99f407e11d6f7f1b15f1b3ec01
+            image: quay.io/konflux-ci/release-service-utils:8684920ccae6c73bd9f3f23367490a9c04653a09
             script: |
               #!/usr/bin/env sh
               set -eux
 
               cp "$(workspaces.data.path)/$(params.sbom)" sbom.json
 
-              test "$(jq -r '.name' sbom.json)" == "Red Hat Openstack Product"
+              test "$(jq -r '.name' sbom.json)" == "Red Hat Openstack Product 123"
 
               # Check product SPDX package and relationship
               test "$(jq -r '.packages[0].SPDXID' sbom.json)" == "SPDXRef-product"
