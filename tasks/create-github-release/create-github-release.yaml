@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-github-release
   labels:
-    app.kubernetes.io/version: "2.1.1"
+    app.kubernetes.io/version: "2.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -46,10 +46,17 @@ spec:
         cd "$(workspaces.data.path)/$CONTENT_DIRECTORY"
         set -o pipefail
         shopt -s failglob
-        gh release create "v${RELEASE_VERSION}" ./*.zip ./*.json ./*SHA256SUMS ./*.sig \
+
+        if gh release list --repo "$REPOSITORY" | grep -q "$RELEASE_VERSION"; then
+          echo "Release v${RELEASE_VERSION} exists"
+          echo "https://github.com/$REPOSITORY/releases/tag/v${RELEASE_VERSION}" > "$(results.url.path)"
+        else 
+          gh release create "v${RELEASE_VERSION}" ./*.zip ./*.json ./*SHA256SUMS ./*.sig \
           --repo "$REPOSITORY" --title "Release $RELEASE_VERSION" | tee "$(results.url.path)"
+        fi
 
         jq -n --arg release "$(cat "$(results.url.path)")" '{"github-release": {"url": $release}}' | tee "$RESULTS_FILE"
+
       env:
         - name: GH_TOKEN
           valueFrom:

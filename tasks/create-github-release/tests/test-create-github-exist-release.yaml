@@ -2,10 +2,11 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-create-github-release
+  name: test-create-github-exist-release
 spec:
   description: |
-    Run the create-github-release task
+    Run the create-github-release task to create an existing release. 
+    It will not be recreated.
   workspaces:
     - name: tests-workspace
   tasks:
@@ -38,7 +39,7 @@ spec:
         - name: githubSecret
           value: test-create-github-release-token
         - name: repository
-          value: foo/bar
+          value: foo/repo_with_release
         - name: release_version
           value: 1.2.3
         - name: content_directory
@@ -64,15 +65,8 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              if ! grep "release create v1.2.3" < "$(workspaces.data.path)"/mock_gh.txt 2> /dev/null
-              then
-                echo Error: release create v1.2.3 was expected. Actual call:
-                cat "$(workspaces.data.path)"/mock_gh.txt
-                exit 1
-              fi
-
-              if [ "$(wc -l < "$(workspaces.data.path)"/mock_gh.txt)" != 2 ]; then
-                echo Error: gh was expected to be called 2 times. Actual calls:
+              if [ "$(wc -l < "$(workspaces.data.path)"/mock_gh.txt)" != 1 ]; then
+                echo Error: gh was expected to be called 1 times. Actual calls:
                 cat "$(workspaces.data.path)"/mock_gh.txt
                 exit 1
               fi
