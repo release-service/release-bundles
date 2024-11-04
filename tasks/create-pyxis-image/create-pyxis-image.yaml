@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-pyxis-image
   labels:
-    app.kubernetes.io/version: "3.4.0"
+    app.kubernetes.io/version: "3.4.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -195,7 +195,7 @@ spec:
                         gunzip "${BLOB_FILE}.gz"
 
                         # Measure it
-                        EXPANDED_DIGEST=$(sha256sum "${BLOB_FILE}" | cut -d " " -f 1)
+                        EXPANDED_DIGEST="sha256:$(sha256sum "${BLOB_FILE}" | cut -d " " -f 1)"
                         EXPANDED_SIZE=$(wc --bytes "${BLOB_FILE}" | awk '{print $1}' | tr -d '\n')
 
                         # Append this information to the parsed_data manifest
