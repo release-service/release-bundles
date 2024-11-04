@@ -130,8 +130,7 @@ script will install the task CR locally. For example:
       name: apply-mapping
 ```
 
-Currently task tests are not required, so if a task version directory is modified
-in a PR and there are no tests, that directory will be skipped.
+Task tests are required for all new tasks. For task updates, if the task doesn't currently have tests, adding them is not strictly required, but is recommended.
 
 ##### Testing scenarios where the Task is expected to fail
 
