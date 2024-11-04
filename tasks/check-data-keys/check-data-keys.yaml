@@ -52,3 +52,4 @@ spec:
         mv "/tmp/systems" "$(workspaces.data.path)/$(params.dataPath)"
 
         check-jsonschema --output-format=text --schemafile "/tmp/schema"  "$(workspaces.data.path)/$(params.dataPath)"
+        
