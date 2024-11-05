@@ -1,0 +1,74 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-verify-access-to-resources-tenant-release
+spec:
+  description: >
+    Run the verify-access-to-resources task without a ReleasePlanAdmission and Releaseconfig to
+    verify these are not required checks.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      taskSpec:
+        steps:
+          - name: create-crs
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              cat > release << EOF
+              apiVersion: appstudio.redhat.com/v1alpha1
+              kind: Release
+              metadata:
+                name: release-sample
+                namespace: default
+              EOF
+              kubectl apply -f release
+
+              cat > releaseplan << EOF
+              apiVersion: appstudio.redhat.com/v1alpha1
+              kind: ReleasePlan
+              metadata:
+                name: releaseplan-sample
+                namespace: default
+              EOF
+              kubectl apply -f releaseplan
+
+              cat > snapshot << EOF
+              apiVersion: appstudio.redhat.com/v1alpha1
+              kind: Snapshot
+              metadata:
+                name: snapshot-sample
+                namespace: default
+              EOF
+              kubectl apply -f snapshot
+    - name: run-task
+      taskRef:
+        name: verify-access-to-resources
+      params:
+        - name: release
+          value: default/release-sample
+        - name: releasePlan
+          value: default/releaseplan-sample
+        - name: snapshot
+          value: default/snapshot-sample
+        - name: requireInternalServices
+          value: "true"
+      runAfter:
+        - setup
+  finally:
+    - name: cleanup
+      taskSpec:
+        steps:
+          - name: delete-crs
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              kubectl delete release release-sample
+              kubectl delete releaseplan releaseplan-sample
+              kubectl delete snapshot snapshot-sample

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: collect-data
   labels:
-    app.kubernetes.io/version: "4.5.3"
+    app.kubernetes.io/version: "4.6.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -22,9 +22,11 @@ spec:
     - name: releasePlanAdmission
       type: string
       description: The namespaced name of the ReleasePlanAdmission
+      default: ""
     - name: releaseServiceConfig
       type: string
       description: The namespaced name of the ReleaseServiceConfig
+      default: ""
     - name: snapshot
       type: string
       description: The namespaced name of the Snapshot
@@ -107,15 +109,14 @@ spec:
         echo -n "$RELEASEPLAN_PATH" > "$(results.releasePlan.path)"
         get-resource "releaseplan" "${RELEASE_PLAN}" | tee "$(workspaces.data.path)/$RELEASEPLAN_PATH"
 
-        RELEASEPLANADMISSION_PATH="$(params.subdirectory)/release_plan_admission.json"
-        echo -n "$RELEASEPLANADMISSION_PATH" > "$(results.releasePlanAdmission.path)"
-        get-resource "releaseplanadmission" "${RELEASE_PLAN_ADMISSION}" \
-          | tee "$(workspaces.data.path)/$RELEASEPLANADMISSION_PATH"
-
-        RELEASESERVICECONFIG_PATH="$(params.subdirectory)/release_service_config.json"
-        echo -n "$RELEASESERVICECONFIG_PATH" > "$(results.releaseServiceConfig.path)"
-        get-resource "releaseserviceconfig" "${RELEASE_SERVICE_CONFIG}" \
-          | tee "$(workspaces.data.path)/$RELEASESERVICECONFIG_PATH"
+        if [[ -n "${RELEASE_SERVICE_CONFIG}" ]]; then
+          RELEASESERVICECONFIG_PATH="$(params.subdirectory)/release_service_config.json"
+          echo -n "$RELEASESERVICECONFIG_PATH" > "$(results.releaseServiceConfig.path)"
+          get-resource "releaseserviceconfig" "${RELEASE_SERVICE_CONFIG}" \
+            | tee "$(workspaces.data.path)/$RELEASESERVICECONFIG_PATH"
+        else
+          touch "$(results.releaseServiceConfig.path)"
+        fi
 
         echo -e "\nFetching Snapshot Spec"
         SNAPSHOTSPEC_PATH="$(params.subdirectory)/snapshot_spec.json"
@@ -131,14 +132,23 @@ spec:
 
         release_plan_result=$(get-resource "releaseplan" "${RELEASE_PLAN}" "{.spec.data}")
 
-        release_plan_admission_result=$(get-resource "releaseplanadmission" "${RELEASE_PLAN_ADMISSION}" \
-            "{.spec.data}")
-
         # Merge Release and ReleasePlan keys. ReleasePlan has higher priority
         merged_output=$(merge-json "$release_result" "$release_plan_result")
 
-        # Merge now with ReleasePlanAdmission keys. ReleasePlanAdmission has higher priority
-        merged_output=$(merge-json "$merged_output" "$release_plan_admission_result")
+        if [[ -n "${RELEASE_PLAN_ADMISSION}" ]]; then
+          RELEASEPLANADMISSION_PATH="$(params.subdirectory)/release_plan_admission.json"
+          echo -n "$RELEASEPLANADMISSION_PATH" > "$(results.releasePlanAdmission.path)"
+          get-resource "releaseplanadmission" "${RELEASE_PLAN_ADMISSION}" \
+            | tee "$(workspaces.data.path)/$RELEASEPLANADMISSION_PATH"
+
+          release_plan_admission_result=$(get-resource "releaseplanadmission" "${RELEASE_PLAN_ADMISSION}" \
+              "{.spec.data}")
+
+          # Merge now with ReleasePlanAdmission keys. ReleasePlanAdmission has higher priority
+          merged_output=$(merge-json "$merged_output" "$release_plan_admission_result")
+        else
+          touch "$(results.releasePlanAdmission.path)"
+        fi
 
         DATA_PATH="$(params.subdirectory)/data.json"
         echo -n "$DATA_PATH" > "$(results.data.path)"
@@ -200,8 +210,11 @@ spec:
 
         check_source "Release" "$(workspaces.data.path)/$(params.subdirectory)/release.json"
         check_source "ReleasePlan" "$(workspaces.data.path)/$(params.subdirectory)/release_plan.json"
-        check_source "ReleasePlanAdmission" \
-            "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json"
+
+        if [[ -n "${RELEASE_PLAN_ADMISSION}" ]]; then
+          check_source "ReleasePlanAdmission" \
+              "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json"
+        fi
 
         exit $RC
     - name: print-pipeline-ref-info
@@ -210,8 +223,13 @@ spec:
         #!/usr/bin/env bash
         set -eu
 
-        pipelineref=$(jq -c '.spec.pipeline.pipelineRef' \
-          "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json")
+        if [[ -f "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json" ]]; then
+          pipelineref=$(jq -c '.spec.pipeline.pipelineRef' \
+            "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json")
+        else
+          pipelineref=$(jq -c '.spec.pipeline.pipelineRef' \
+            "$(workspaces.data.path)/$(params.subdirectory)/release_plan.json")
+        fi
         resolver=$(jq -r '.resolver // ""' <<< "${pipelineref}")
         if [ "${resolver}" == "git" ] ; then
           url=$(jq -r '.params[] | select(.name=="url") | .value' <<< "${pipelineref}")

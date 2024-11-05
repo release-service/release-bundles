@@ -8,10 +8,13 @@ This Tekton task is used to verify access to various resources in the pipelines.
 |-------------------------|---------------------------------------------------------|----------|---------------|
 | release                 | Namespace/name of the Release                           | No       | -             |
 | releasePlan             | Namespace/name of the ReleasePlan                       | No       | -             |
-| releasePlanAdmission    | Namespace/name of the ReleasePlanAdmission              | No       | -             |
-| releaseServiceConfig    | Namespace/name of the ReleaseServiceConfig              | No       | -             |
+| releasePlanAdmission    | Namespace/name of the ReleasePlanAdmission              | Yes      | -             |
+| releaseServiceConfig    | Namespace/name of the ReleaseServiceConfig              | Yes      | -             |
 | snapshot                | Namespace/name of the Snapshot                          | No       | -             |
 | requireInternalServices | Whether to check if internal requests can be created    | Yes      | false         |
+
+## Changes in 0.4.0
+* `releasePlanAdmission` and `releaseServiceConfig` parameters are now optional to account for tenant release workflow
 
 ## Changes in 0.3.1
 * Fix shellcheck/checkton linting issues in the task

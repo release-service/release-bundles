@@ -22,10 +22,13 @@ should not be present in the Release data section).
 |----------------------|----------------------------------------------------|----------|---------------|
 | release              | Namespaced name of the Release                     | No       | -             |
 | releasePlan          | Namespaced name of the ReleasePlan                 | No       | -             |
-| releasePlanAdmission | Namespaced name of the ReleasePlanAdmission        | No       | -             |
-| releaseServiceConfig | Namespaced name of the ReleaseServiceConfig        | No       | -             |
+| releasePlanAdmission | Namespaced name of the ReleasePlanAdmission        | Yes      | -             |
+| releaseServiceConfig | Namespaced name of the ReleaseServiceConfig        | Yes      | -             |
 | snapshot             | Namespaced name of the Snapshot                    | No       | -             |
 | subdirectory         | Subdirectory inside the workspace to be used.      | Yes      | -             |
+
+## Changes in 4.6.0
+* `releasePlanAdmission` and `releaseServiceConfig` parameters are now optional to account for tenant release workflow
 
 ## Changes in 4.5.3
 * Introduce new step to collect, print and record information about the git resolver metadata for the

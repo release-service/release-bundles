@@ -2,9 +2,9 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: verify-access-to-resources  
+  name: verify-access-to-resources
   labels:
-    app.kubernetes.io/version: "0.3.1"
+    app.kubernetes.io/version: "0.4.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -21,9 +21,11 @@ spec:
     - name: releasePlanAdmission
       description: Namespace/name of the ReleasePlanAdmission
       type: string
+      default: ""
     - name: releaseServiceConfig
       description: Namespace/name of the ReleaseServiceConfig
       type: string
+      default: ""
     - name: snapshot
       description: Namespace/name of the Snapshot
       type: string
@@ -31,7 +33,7 @@ spec:
       description: Whether internal services are required
       type: string
       default: "false"
-  steps: 
+  steps:
     - name: verify-access-to-resources
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       script: |
@@ -39,6 +41,9 @@ spec:
 
           ORIGIN_NAMESPACE="$(cut -f1 -d/ <<< "$(params.release)")"
           TARGET_NAMESPACE="$(cut -f1 -d/ <<< "$(params.releasePlanAdmission)")"
+          if [[ -z "${TARGET_NAMESPACE}" ]]; then
+            TARGET_NAMESPACE="${ORIGIN_NAMESPACE}"
+          fi
           RSC_NAMESPACE="$(cut -f1 -d/ <<< "$(params.releaseServiceConfig)")"
 
           RELEASE_NAME="$(cut -f2 -d/ <<< "$(params.release)")"
@@ -50,10 +55,21 @@ spec:
           CAN_I_READ_RELEASES="$(kubectl auth can-i get release/"${RELEASE_NAME}" -n "${ORIGIN_NAMESPACE}")"
           CAN_I_READ_RELEASEPLANS="$(kubectl auth can-i get releaseplan/"${RELEASEPLAN_NAME}"\
               -n "${ORIGIN_NAMESPACE}")"
-          CAN_I_READ_RELEASEPLANADMISSIONS="$(kubectl auth can-i get\
-              releaseplanadmission/"${RELEASEPLANADMISSION_NAME}" -n "${TARGET_NAMESPACE}")"
-          CAN_I_READ_RELEASESERVICECONFIG="$(kubectl auth can-i get\
-              releaseserviceconfig/"${RELEASESERVICECONFIG_NAME}" -n "${RSC_NAMESPACE}")"
+
+          if [[ -n "${RELEASEPLANADMISSION_NAME}" ]]; then
+            CAN_I_READ_RELEASEPLANADMISSIONS="$(kubectl auth can-i get\
+                releaseplanadmission/"${RELEASEPLANADMISSION_NAME}" -n "${TARGET_NAMESPACE}")"
+          else
+            CAN_I_READ_RELEASEPLANADMISSIONS="skipped"
+          fi
+
+          if [[ -n "${RELEASESERVICECONFIG_NAME}" ]]; then
+            CAN_I_READ_RELEASESERVICECONFIG="$(kubectl auth can-i get\
+                releaseserviceconfig/"${RELEASESERVICECONFIG_NAME}" -n "${RSC_NAMESPACE}")"
+          else
+            CAN_I_READ_RELEASESERVICECONFIG="skipped"
+          fi
+
           CAN_I_READ_SNAPSHOTS="$(kubectl auth can-i get snapshot/"${SNAPSHOT_NAME}" -n "${ORIGIN_NAMESPACE}")"
 
           if [ "$(params.requireInternalServices)" = "true" ]; then
