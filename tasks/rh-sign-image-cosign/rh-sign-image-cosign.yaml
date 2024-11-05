@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: rh-sign-image-cosign
   labels:
-    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/version: "1.1.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -29,7 +29,7 @@ spec:
       description: Workspace to read and save files
   steps:
     - name: sign-image
-      image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+      image: quay.io/konflux-ci/release-service-utils:70be98cc78c9ef52526c4f2be437321aa943b516
       env:
         - name: AWS_DEFAULT_REGION
           valueFrom:

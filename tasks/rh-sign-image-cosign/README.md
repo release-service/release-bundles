@@ -10,6 +10,9 @@ Tekton task to sign container images in snapshot by cosign.
 | secretName             | Name of secret containing needed credentials                                                                                                                                                                                                      | No       | -             |
 | signRegistryAccessPath | The relative path in the workspace to a text file that contains a list of repositories that needs registry.access.redhat.com image references to be signed (i.e. requires_terms=true), one repository string per line, e.g. "rhtas/cosign-rhel9". | No       | -             |
 
+## Changes in 1.1.0
+* Bump release-service-utils to upgrade cosign version to 2.4.0 which includes the fix of an issue the osci team is having when trying to release.
+
 ## Changes in 1.0.0
 * Added mandatory parameter `signRegistryAccessPath`.
   * The relative path in the workspace to a text file that contains a list of repositories
