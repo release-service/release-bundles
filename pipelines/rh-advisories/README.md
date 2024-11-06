@@ -16,12 +16,16 @@ the rh-push-to-registry-redhat-io pipeline.
 | snapshot                        | The namespaced name (namespace/name) of the snapshot                                                                               | No       | -                                                         |
 | enterpriseContractPolicy        | JSON representation of the policy to be applied when validating the enterprise contract                                            | No       | -                                                         |
 | enterpriseContractExtraRuleData | Extra rule data to be merged into the policy specified in params.enterpriseContractPolicy. Use syntax "key1=value1,key2=value2..." | Yes      | pipeline_intention=release                                |
-| enterpriseContractTimeout       | Timeout setting for `ec validate`                                                                                                  | Yes      | 90m0s                                                     |
+| enterpriseContractTimeout       | Timeout setting for `ec validate`                                                                                                  | Yes      | 8h0m0s                                                    |
 | enterpriseContractWorkerCount   | Number of parallel workers to use for policy evaluation.                                                                           | Yes      | 4                                                         |
 | postCleanUp                     | Cleans up workspace after finishing executing the pipeline                                                                         | Yes      | true                                                      |
 | verify_ec_task_bundle           | The location of the bundle containing the verify-enterprise-contract task                                                          | No       | -                                                         |
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
+
+## Changes in 1.5.3
+* Increase enterpriseContractTimeout to a large value, 8 hours.
+  * Users don't have control over this, so set it to a large value so that the pipeline timeout will kick in first, if anything.
 
 ## Changes in 1.5.2
 * Make sure `create-advisory` runs late in the pipeline
