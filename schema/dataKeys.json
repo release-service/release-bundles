@@ -413,7 +413,25 @@
                   "filePrefix": {
                     "type": "string",
                     "description": "filePrefix to use to select files to add to content gateway"
-                  }
+                  },
+                  "mirrorOpenshiftPush": {
+                    "type": "boolean",
+                    "description": "whether or not to push to mirror.openshift.com"
+                  },
+                  "components": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "The component name found in the snapshot e.g. example-component"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "Description propogated to Content Gateway"
+                        }
                 }
               },
               "pushSourceContainer": {
