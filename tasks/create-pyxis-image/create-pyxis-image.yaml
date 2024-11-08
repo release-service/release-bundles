@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-pyxis-image
   labels:
-    app.kubernetes.io/version: "3.4.2"
+    app.kubernetes.io/version: "3.4.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -48,7 +48,7 @@ spec:
       description: The relative path in the workspace to the stored pyxis data json
   steps:
     - name: create-pyxis-image
-      image: quay.io/konflux-ci/release-service-utils:6963f58c2e87b9162e6de874f6097695e0c36e87
+      image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
       env:
         - name: pyxisCert
           valueFrom:
@@ -224,7 +224,7 @@ spec:
                   --rh-push "$(params.rhPush)" \
                   --dockerfile "${DOCKERFILE_PATH}" | tee "/tmp/output"
                 # The rh-push-to-external-registry e2e test depends on this line being in the task log
-                IMAGEID=$(awk '/The image id is/{print $NF}' /tmp/output)
+                IMAGEID=$(awk '/The image id is/{print $NF}' /tmp/output|head -1)
 
                 # Remove the new image tags from all previous images, but only if rhPush=true
                 if [ "$(params.rhPush)" = "true" ]; then
