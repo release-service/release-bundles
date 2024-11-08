@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-pyxis-image
   labels:
-    app.kubernetes.io/version: "3.4.1"
+    app.kubernetes.io/version: "3.4.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -48,7 +48,7 @@ spec:
       description: The relative path in the workspace to the stored pyxis data json
   steps:
     - name: create-pyxis-image
-      image: quay.io/konflux-ci/release-service-utils:0feab5b3d54d450b6fcb4dbc73db0c78f27e6164
+      image: quay.io/konflux-ci/release-service-utils:6963f58c2e87b9162e6de874f6097695e0c36e87
       env:
         - name: pyxisCert
           valueFrom:
