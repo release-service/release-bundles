@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.5.4"
+    app.kubernetes.io/version: "1.5.5"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -171,6 +171,7 @@ spec:
       runAfter:
         - verify-access-to-resources
     - name: apply-mapping
+      retries: 3
       taskRef:
         resolver: "git"
         params:
