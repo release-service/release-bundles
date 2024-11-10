@@ -34,7 +34,7 @@ spec:
       description: Build timestamp for the publishing image
     - name: pipelineRunUid
       type: string
-      description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+      description: The UID of the current pipelineRun. Used as a label value when creating internal requests
   workspaces:
     - name: data
       description: Workspace to store the params and responses for the internalRequest
@@ -47,7 +47,7 @@ spec:
         quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       script: |
         #!/usr/bin/env bash
-        set -e
+        set -euo pipefail
 
         DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
         if [ ! -f "${DATA_FILE}" ] ; then
@@ -65,20 +65,47 @@ spec:
           publishingImages+=("$(params.targetIndex)-$(params.buildTimestamp)")
         fi
 
-        for((i=0; i<${#publishingImages[@]}; i++ )); do
-            echo "=== Creating internal request to publish image:"
-            echo ""
-            echo "- from: $(params.sourceIndex)"
-            echo "- to: ${publishingImages[$i]}"
+        # Prepare authentication for skopeo
+        AUTH_FILE="$(workspaces.data.path)/authfile.json"
+        echo "${credentials}" > "${AUTH_FILE}"
+
+        for target_image in "${publishingImages[@]}"; do
+            echo "=== Processing Image ==="
+            echo "Source: $(params.sourceIndex)"
+            echo "Target: ${target_image}"
+
+            # Check if the target image exists
+            set +e
+            existing_digest=$(skopeo inspect --authfile "${AUTH_FILE}" "docker://${target_image}" --format '{{.Digest}}' 2>/dev/null)
+            inspect_exit_code=$?
+            set -e
+
+            # Get the source image digest
+            source_digest=$(skopeo inspect --authfile "${AUTH_FILE}" "docker://$(params.sourceIndex)" --format '{{.Digest}}')
+
+            if [ $inspect_exit_code -eq 0 ]; then
+                if [ "$existing_digest" == "$source_digest" ]; then
+                    echo "Image ${target_image} already exists with the same digest. Skipping publishing." | tee "$(results.requestMessage.path)"
+                    continue
+                else
+                    echo "Image ${target_image} exists but has a different digest. Skipping to avoid overwriting." | tee "$(results.requestMessage.path)"
+                    continue
+                fi
+            fi
+
+            echo "Publishing image to ${target_image}..."
 
             internal-request -r "${request}" \
                 -p sourceIndex="$(params.sourceIndex)" \
-                -p targetIndex="${publishingImages[$i]}" \
+                -p targetIndex="${target_image}" \
                 -p publishingCredentials="${credentials}" \
                 -p retries="$(params.retries)" \
                 -t "$(params.requestTimeout)" \
                 -l ${pipelinerun_label}="$(params.pipelineRunUid)"
-            echo "=== done"
-            echo ""
+
+            echo "Published image ${target_image} successfully." | tee "$(results.requestMessage.path)"
             echo ""
         done
+
+        # Clean up the authentication file
+        rm -f "${AUTH_FILE}"
