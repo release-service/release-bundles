@@ -139,4 +139,13 @@ function skopeo() {
 function cosign () {
   echo "$@" >> $(workspaces.data.path)/mock_cosign_calls
   echo "running cosign: $@"
+  # mock cosign failing the first 3 calls for the retry test
+  if [[ "$@" == *":retry-tag"* ]]
+  then
+    if [[ $(cat $(workspaces.data.path)/mock_cosign_calls | wc -l) -le 3 ]]
+    then
+      echo "expected cosign call failure for retry test"
+      return 1
+    fi
+  fi
 }
