@@ -48,7 +48,7 @@ spec:
       description: The relative path in the workspace to the stored pyxis data json
   steps:
     - name: create-pyxis-image
-      image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
+      image: quay.io/konflux-ci/release-service-utils:f00c49df232d477ba843b4c48343d745dfebe747
       env:
         - name: pyxisCert
           valueFrom:
@@ -163,6 +163,12 @@ spec:
                   "${ORAS_ARGS[@]}" \
                   "${PULLSPEC}" \
                       | tee "${MANIFEST_FILE}"
+
+                # Temporary - do not merge
+                # As a side-effect of the way they build without squashing, their final layer is always bit-wise identical. This causes upload to pyxis to fail which cannot tolerate duplicate "top_layer_id" values. Here - just delete the layers so that no layer information is uploaded. Requires https://github.com/konflux-ci/release-service-utils/pull/311
+                echo "Delete the layers, just for rhel-bootc"
+                jq '.layers = []' "${MANIFEST_FILE}" > "${MANIFEST_FILE}.tmp"
+                mv "${MANIFEST_FILE}.tmp"  "${MANIFEST_FILE}"
 
                 # Augment that manifest with further information about the layers, decompressed
                 # This requires pulling the layers to decompress and then measure them
