@@ -164,6 +164,12 @@ spec:
                   "${PULLSPEC}" \
                       | tee "${MANIFEST_FILE}"
 
+                # Temporary - do not merge
+                # As a side-effect of the way they build without squashing, their final layer is always bit-wise identical. This causes upload to pyxis to fail which cannot tolerate duplicate "top_layer_id" values. Here - just delete the layers so that no layer information is uploaded. Requires https://github.com/konflux-ci/release-service-utils/pull/311
+                echo "Delete the layers, just for rhel-bootc"
+                jq '.layers = []' "${MANIFEST_FILE}" > "${MANIFEST_FILE}.tmp"
+                mv "${MANIFEST_FILE}.tmp"  "${MANIFEST_FILE}"
+
                 # Augment that manifest with further information about the layers, decompressed
                 # This requires pulling the layers to decompress and then measure them
                 while IFS= read -r BLOB_DETAIL;
