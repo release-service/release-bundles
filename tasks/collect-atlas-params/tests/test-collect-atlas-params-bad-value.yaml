@@ -1,0 +1,45 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-collect-atlas-params-bad-value
+  annotations:
+    test/assert-task-failure: "run-task"
+spec:
+  description: |
+    Run the collect-atlas-params task with a bad value as atlasServer.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              cat > "$(workspaces.data.path)/data.json" << EOF
+              {
+                "atlas": {
+                  "server": "invalid"
+                }
+              }
+              EOF
+    - name: run-task
+      taskRef:
+        name: collect-atlas-params
+      params:
+        - name: dataPath
+          value: data.json
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup

@@ -23,6 +23,14 @@ the rh-push-to-registry-redhat-io pipeline.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 1.7.0
+* Add collect-atlas-params task to fetch Atlas parameters from the RPA.
+* Add create-product-sbom task to create product-level SBOMs.
+* Add update-component-sbom task to update component-level SBOMs with release
+  info.
+* Add upload-product-sbom task to push the product SBOM to Atlas.
+* Add upload-component-sbom task to push the component-level SBOMs to Atlas.
+
 ## Changes in 1.6.0
 * Add new parameter `schema` to the `check-data-keys` task. 
 * Add new systems pyxis,mapping & signing to the task.

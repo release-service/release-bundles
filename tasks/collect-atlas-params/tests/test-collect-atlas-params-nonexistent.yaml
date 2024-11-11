@@ -1,0 +1,66 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-collect-atlas-params-nonexistent
+spec:
+  description: |
+    Run the collect-atlas-params task with a missing atlasServer key.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+              echo "{}" > "$(workspaces.data.path)/data.json"
+    - name: run-task
+      taskRef:
+        name: collect-atlas-params
+      params:
+        - name: dataPath
+          value: data.json
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+    - name: check-result
+      params:
+        - name: secretName
+          value: $(tasks.run-task.results.secretName)
+        - name: ssoTokenUrl
+          value: $(tasks.run-task.results.ssoTokenUrl)
+        - name: bombasticApiUrl
+          value: $(tasks.run-task.results.bombasticApiUrl)
+      taskSpec:
+        params:
+          - name: secretName
+          - name: ssoTokenUrl
+          - name: bombasticApiUrl
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
+            env:
+              - name: "SECRET_NAME"
+                value: '$(params.secretName)'
+              - name: "SSO_TOKEN_URL"
+                value: '$(params.ssoTokenUrl)'
+              - name: "BOMBASTIC_API_URL"
+                value: '$(params.bombasticApiUrl)'
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              test "$SECRET_NAME" = ""
+              test "$SSO_TOKEN_URL" = ""
+              test "$BOMBASTIC_API_URL" = ""

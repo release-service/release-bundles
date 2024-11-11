@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.6.0"
+    app.kubernetes.io/version: "1.7.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -480,6 +480,61 @@ spec:
           workspace: release-workspace
       runAfter:
         - create-pyxis-image
+    - name: update-component-sbom
+      when:
+        - input: "$(tasks.collect-atlas-params.results.secretName)"
+          operator: notin
+          values: [""]
+      taskRef:
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/update-component-sbom/update-component-sbom.yaml
+        resolver: git
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      params:
+        - name: dataJsonPath
+          value: "$(tasks.collect-data.results.data)"
+        - name: downloadedSbomPath
+          value: "$(tasks.push-rpm-data-to-pyxis.results.sbomPath)"
+      runAfter:
+        - collect-data
+        - collect-atlas-params
+        - push-rpm-data-to-pyxis
+        - populate-release-notes-images
+    - name: upload-component-sbom
+      when:
+        - input: "$(tasks.collect-atlas-params.results.secretName)"
+          operator: notin
+          values: [""]
+      params:
+        - name: sbomDir
+          value: "$(tasks.push-rpm-data-to-pyxis.results.sbomPath)"
+        - name: atlasSecretName
+          value: "$(tasks.collect-atlas-params.results.secretName)"
+        - name: ssoTokenUrl
+          value: "$(tasks.collect-atlas-params.results.ssoTokenUrl)"
+        - name: bombasticApiUrl
+          value: "$(tasks.collect-atlas-params.results.bombasticApiUrl)"
+      taskRef:
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
+        resolver: git
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - update-component-sbom
     - name: run-file-updates
       params:
         - name: fileUpdatesPath
@@ -533,6 +588,75 @@ spec:
           workspace: release-workspace
       runAfter:
         - populate-release-notes-images
+    - name: collect-atlas-params
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/collect-atlas-params/collect-atlas-params.yaml
+      params:
+        - name: dataPath
+          value: "$(tasks.collect-data.results.data)"
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - collect-data
+    - name: create-product-sbom
+      when:
+        - input: "$(tasks.collect-atlas-params.results.secretName)"
+          operator: notin
+          values: [""]
+      params:
+        - name: dataJsonPath
+          value: "$(tasks.collect-data.results.data)"
+      taskRef:
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/create-product-sbom/create-product-sbom.yaml
+        resolver: git
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - collect-atlas-params
+        - populate-release-notes-images
+    - name: upload-product-sbom
+      when:
+        - input: "$(tasks.collect-atlas-params.results.secretName)"
+          operator: notin
+          values: [""]
+      params:
+        - name: sbomDir
+          value: "$(tasks.create-product-sbom.results.productSBOMPath)"
+        - name: atlasSecretName
+          value: "$(tasks.collect-atlas-params.results.secretName)"
+        - name: ssoTokenUrl
+          value: "$(tasks.collect-atlas-params.results.ssoTokenUrl)"
+        - name: bombasticApiUrl
+          value: "$(tasks.collect-atlas-params.results.bombasticApiUrl)"
+      taskRef:
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
+        resolver: git
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - create-product-sbom
     - name: create-advisory
       retries: 5
       params:

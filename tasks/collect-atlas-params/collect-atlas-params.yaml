@@ -1,0 +1,69 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: collect-atlas-params
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Tekton task that collects Atlas API configuration options from the data file.
+  params:
+    - name: dataPath
+      type: string
+      description: |
+        Path to the JSON string of the merged data containing the Atlas config.
+  workspaces:
+    - name: data
+  results:
+    - name: bombasticApiUrl
+      type: string
+      description: |
+        URL of the bombastic API.
+    - name: ssoTokenUrl
+      type: string
+      description: |
+        URL of the SSO token issuer.
+    - name: secretName
+      type: string
+      description: |
+        The kubernetes secret to use to authenticate to bombastic.
+  steps:
+    - name: collect-atlas-params
+      image:
+        quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
+      script: |
+        #!/usr/bin/env bash
+        set -x
+
+        DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
+        if [ ! -f "${DATA_FILE}" ] ; then
+            echo "ERROR: No valid data file was provided."
+            exit 1
+        fi
+
+        atlasServer=$(jq -r '.atlas.server' "$DATA_FILE")
+        if [ "$atlasServer" = "null" ]; then
+            # In this case, SBOM processing will be skipped.
+            bombasticApiUrl=""
+            ssoTokenUrl=""
+            secretName=""
+        elif [ "$atlasServer" = "stage" ]; then
+            bombasticApiUrl="https://sbom.atlas.release.stage.devshift.net"
+            ssoTokenUrl="https://auth.stage.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/token"
+            secretName="atlas-staging-sso-secret"
+        elif [ "$atlasServer" = "production" ]; then
+            bombasticApiUrl="https://sbom.atlas.release.devshift.net"
+            ssoTokenUrl="https://auth.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/token"
+            secretName="atlas-prod-sso-secret"
+        else
+            echo "ERROR: Unknown .atlas.server value '$atlasServer'. Expected 'stage' or 'production'."
+            exit 1
+        fi
+
+        echo -n "$bombasticApiUrl" > "$(results.bombasticApiUrl.path)"
+        echo -n "$ssoTokenUrl" > "$(results.ssoTokenUrl.path)"
+        echo -n "$secretName" > "$(results.secretName.path)"

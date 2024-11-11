@@ -18,7 +18,7 @@ spec:
           - name: data
         steps:
           - name: setup
-            image: quay.io/konflux-ci/release-service-utils:8684920ccae6c73bd9f3f23367490a9c04653a09
+            image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
             script: |
               #!/usr/bin/env sh
               set -eux
@@ -29,20 +29,22 @@ spec:
                   "product_name": "Red Hat Openstack Product",
                   "product_version": "123",
                   "cpe": "cpe:/a:example:openstack:el8",
-                  "images": [
-                    {
-                      "component": "test-component-1",
-                      "purl": "test-component-1-purl-1"
-                    },
-                    {
-                      "component": "test-component-1",
-                      "purl": "test-component-1-purl-2"
-                    },
-                    {
-                      "component": "test-component-2",
-                      "purl": "test-component-2-purl-1"
-                    }
-                  ]
+                  "content": {
+                    "images": [
+                      {
+                        "component": "test-component-1",
+                        "purl": "test-component-1-purl-1"
+                      },
+                      {
+                        "component": "test-component-1",
+                        "purl": "test-component-1-purl-2"
+                      },
+                      {
+                        "component": "test-component-2",
+                        "purl": "test-component-2-purl-1"
+                      }
+                    ]
+                  }
                 }
               }
               EOF
@@ -62,21 +64,21 @@ spec:
         - name: data
           workspace: tests-workspace
       params:
-        - name: sbom
+        - name: sbomDir
           value: $(tasks.run-task.results.productSBOMPath)
       taskSpec:
         params:
-          - name: sbom
+          - name: sbomDir
         workspaces:
           - name: data
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:8684920ccae6c73bd9f3f23367490a9c04653a09
+            image: quay.io/konflux-ci/release-service-utils:221d71a4f6b1a50b36b685aa20d86d7df9de33fc
             script: |
               #!/usr/bin/env sh
               set -eux
 
-              cp "$(workspaces.data.path)/$(params.sbom)" sbom.json
+              cp "$(workspaces.data.path)/$(params.sbomDir)/Red-Hat-Openstack-Product-123.json" sbom.json
 
               test "$(jq -r '.name' sbom.json)" == "Red Hat Openstack Product 123"
 

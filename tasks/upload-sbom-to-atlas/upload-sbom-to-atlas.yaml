@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: upload-sbom-to-atlas
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -12,12 +12,11 @@ spec:
   description: |-
     Tekton task for uploading a SBOM file to Atlas.
   params:
-    - name: productSBOMPath
-      default: "sboms"
+    - name: sbomDir
       description: >-
         Directory containing SBOM files. The task will search for CycloneDX JSON
         SBOMs recursively in this directory and upload them all to Atlas.
-        The path is relative to the 'sboms' workspace.
+        The path is relative to the 'data' workspace.
       type: string
     - name: httpRetries
       default: "3"
@@ -34,11 +33,6 @@ spec:
     - name: ssoTokenUrl
       default: "https://auth.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/token"
       description: URL of the SSO token issuer
-      type: string
-    - name: skipUploadingSbom
-      default: "true"
-      description: >-
-        If enabled, all steps of the task are skipped.
       type: string
     - name: supportedCycloneDxVersion
       default: "1.4"
@@ -72,14 +66,8 @@ spec:
         # creating working directory
         mkdir -p "$(workspaces.data.path)/workdir"
 
-        sbomsDir="$(workspaces.data.path)/$(params.productSBOMPath)"
+        sbomsDir="$(workspaces.data.path)/$(params.sbomDir)"
         workdir="$(workspaces.data.path)/workdir"
-        
-        skipUploadingSbom=$(params.skipUploadingSbom)
-        if [[ "$skipUploadingSbom" == "true" ]]; then
-          echo "Skipping SBOM uploading - skipUploadingSbom == true"
-          exit 0
-        fi
 
         version_lesser_equal() {
           local first
@@ -121,16 +109,9 @@ spec:
             continue  # Skip further processing for non-SBOM files
           fi
 
-          # The 'id' of each SBOM is checksum of the original content, before (possibly)
-          # downgrading the CycloneDX version. The conversion always updates some metadata
-          # (timestamp, UUID), changing the checksum. To avoid duplication, use the original
-          # checksum.
-          echo "Calculating SBOM ID for $file_relpath"
-          sbom_id="sha256:$(sha256sum "$filepath" | cut -d ' ' -f 1)"
-
-          # Symlink the discovered SBOMS to $workdir/${sbom_id}.json so that subsequent steps
+          # Symlink the discovered SBOMS to $workdir so that subsequent steps
           # don't have to look for them again.
-          sbom_path="$workdir/$sbom_id.json"
+          sbom_path="$workdir/$(basename "$filepath")"
           ln -s "$(realpath "$filepath")" "$sbom_path"
 
           # Check if SBOM is CycloneDX or SPDX
@@ -164,12 +145,7 @@ spec:
         set -o errexit -o pipefail -o nounset
 
         workdir="$(workspaces.data.path)/workdir"
-        sbomsDir="$(workspaces.data.path)/$(params.productSBOMPath)"
-
-        skipUploadingSbom=$(params.skipUploadingSbom)
-        if [[ "$skipUploadingSbom" == "true" ]]; then
-          exit 0
-        fi
+        sbomsDir="$(workspaces.data.path)/$(params.sbomDir)"
 
         # Return zero matches when a glob doesn't match rather than returning the glob itself
         shopt -s nullglob
@@ -200,13 +176,8 @@ spec:
         #!/usr/bin/env bash    
         set -o errexit -o pipefail -o nounset
 
-        sbomsDir="$(workspaces.data.path)/$(params.productSBOMPath)"
+        sbomsDir="$(workspaces.data.path)/$(params.sbomDir)"
         workdir="$(workspaces.data.path)/workdir"
-
-        skipUploadingSbom=$(params.skipUploadingSbom)
-        if [[ "$skipUploadingSbom" == "true" ]]; then
-          exit 0
-        fi
 
         shopt -s nullglob
         sboms_to_upload=("$workdir"/*.json)
@@ -219,13 +190,8 @@ spec:
         httpRetries=$(params.httpRetries)
         curl_opts=(--silent --show-error --fail-with-body --retry "$httpRetries")
 
-        # Access the base64-encoded secret values from the mounted volume
-        sso_account_base64="$(cat /secrets/sso_account)"
-        sso_token_base64="$(cat /secrets/sso_token)"
-
-        # Decode the base64-encoded values
-        sso_account=$(echo "$sso_account_base64" | base64 --decode)
-        sso_token=$(echo "$sso_token_base64" | base64 --decode)
+        sso_account="$(cat /secrets/sso_account)"
+        sso_token="$(cat /secrets/sso_token)"
 
         for sbom_path in "${sboms_to_upload[@]}"; do
           original_sbom_relpath="$(realpath "$sbom_path" --relative-base="$sbomsDir")"
@@ -244,7 +210,6 @@ spec:
 
           # https://www.rfc-editor.org/rfc/rfc6749.html#section-5.1
           access_token="$(jq -r .access_token <<< "$token_response")"
-          token_type="$(jq -r .token_type <<< "$token_response")"
           expires_in="$(jq -r ".expires_in // empty" <<< "$token_response")"
 
           retry_max_time=0  # no limit
@@ -252,7 +217,6 @@ spec:
             retry_max_time="$expires_in"
           fi
 
-          # This sbom_id is the one created in the gather-sboms step - sha256:${checksum}
           sbom_id="$(basename -s .json "$sbom_path")"
           supported_version_of_sbom="${sbom_path}.supported_version"
 
@@ -261,7 +225,7 @@ spec:
 
           curl -X PUT "${curl_opts[@]}" \
             --retry-max-time "$retry_max_time" \
-            -H "authorization: $token_type $access_token" \
+            -H "authorization: Bearer $access_token" \
             -H "transfer-encoding: chunked" \
             -H "content-type: application/json" \
             --data "@$supported_version_of_sbom" \

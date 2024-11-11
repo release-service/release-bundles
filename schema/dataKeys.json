@@ -331,6 +331,20 @@
         }
       }
     },
+    "atlas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "server": {
+          "type": "string",
+          "description": "The release Atlas server to push SBOMs to",
+          "enum": [
+            "stage",
+            "production"
+          ]
+        }
+      }
+    },
     "slack": {
       "type": "object",
       "properties": {
