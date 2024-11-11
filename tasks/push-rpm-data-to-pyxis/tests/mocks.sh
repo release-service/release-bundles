@@ -14,7 +14,13 @@ function cosign() {
     exit 1
   fi
 
-  touch /workdir/sboms/${4}
+  if [[ "$4" == *cyclonedx.json ]]; then
+    SBOM_JSON='{"bomFormat": "CycloneDX"}'
+  else
+    SBOM_JSON='{"spdxVersion": "SPDX-2.3"}'
+  fi
+
+  echo "$SBOM_JSON" > /workdir/sboms/${4}
 }
 
 function upload_rpm_data() {
@@ -42,6 +48,17 @@ function upload_rpm_data() {
     echo $LOCK_FILE_COUNT > $(workspaces.data.path)/${3}.count
     sleep 2
     rm $LOCK_FILE
+  fi
+}
+
+function upload_rpm_data_cyclonedx() {
+  echo Mock upload_rpm_data_cyclonedx called with: $*
+  echo $* >> "$(workspaces.data.path)/mock_upload_rpm_data_cyclonedx.txt"
+
+  if [[ "$*" != "--retry --image-id "*" --sbom-path "*".json --verbose" ]]
+  then
+    echo Error: Unexpected call
+    exit 1
   fi
 }
 

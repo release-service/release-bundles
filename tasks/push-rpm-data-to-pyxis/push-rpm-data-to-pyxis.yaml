@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-rpm-data-to-pyxis
   labels:
-    app.kubernetes.io/version: "1.0.3"
+    app.kubernetes.io/version: "1.1.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -38,7 +38,7 @@ spec:
   steps:
     - name: download-sbom-files
       image:
-        quay.io/konflux-ci/release-service-utils:e39e8d32c8263474c63fc1e922d7954d37e32374
+        quay.io/konflux-ci/release-service-utils:fb3aab1684422e897c2bac5acd57d5ecf42615ae
       volumeMounts:
         - mountPath: /workdir
           name: workdir
@@ -95,7 +95,7 @@ spec:
 
     - name: push-rpm-data-to-pyxis
       image:
-        quay.io/konflux-ci/release-service-utils:e39e8d32c8263474c63fc1e922d7954d37e32374
+        quay.io/konflux-ci/release-service-utils:fb3aab1684422e897c2bac5acd57d5ecf42615ae
       env:
         - name: pyxisCert
           valueFrom:
@@ -151,8 +151,27 @@ spec:
 
         for FILE in *.json; do
           IMAGEID=$(echo $FILE | cut -d '.' -f 1)
-          echo Uploading RPM data to Pyxis for IMAGE: "$IMAGEID" with SBOM: "$FILE"
-          upload_rpm_data --retry --image-id "$IMAGEID" --sbom-path "$FILE" --verbose > "${IMAGEID}.out" 2>&1 &
+
+          # Extract the format information using jq
+          UPLOAD_SCRIPT=$(
+            jq -r '
+              if .bomFormat == "CycloneDX" then
+                "upload_rpm_data_cyclonedx"
+              else if .spdxVersion then
+                "upload_rpm_data"
+              else
+                empty
+              end end' "$FILE"
+          )
+
+          # If UPLOAD_SCRIPT is empty, it's not a valid SBOM (CycloneDX or SPDX)
+          if [ -z "$UPLOAD_SCRIPT" ]; then
+            echo "Error: ${FILE}: not a valid SBOM (CycloneDX or SPDX)"
+            exit 1
+          fi
+
+          echo Uploading RPM data to Pyxis for IMAGE: "$IMAGEID" with SBOM: "$FILE using script: $UPLOAD_SCRIPT"
+          $UPLOAD_SCRIPT --retry --image-id "$IMAGEID" --sbom-path "$FILE" --verbose > "${IMAGEID}.out" 2>&1 &
 
           jobs+=($!)  # Save the background process ID
           images+=($IMAGEID)
