@@ -1,0 +1,98 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: cosign-signing-pipeline
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Tekton pipeline for cosign signing
+  params:
+    - name: manifest_digest
+      description: Manifest digest for the signed content, usually in the format sha256:xxx
+      type: string
+    - name: reference
+      description: Docker reference container image to be signed, e.g. quay.io/redhat-pending/ubi8----ubi:latest
+      type: string
+    - name: identity
+      description: Docker reference for the signed content, e.g. registry.stage.redhat.io/ubi8/ubi:latest
+      type: string
+    - name: dataPath
+      type: string
+    - name: taskGitUrl
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+      type: string
+    - name: taskGitRevision
+      description: The revision in the taskGitUrl repo to be used
+      type: string
+  workspaces:
+    - name: pipeline
+  tasks:
+    - name: collect-cosign-signing-params
+      retries: 5
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/collect-cosign-params/collect-cosign-params.yaml
+      params:
+        - name: dataPath
+          value: $(params.dataPath)
+    - name: check-signature-exists
+      retries: 5
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/cosign-check-signature-exists/cosign-check-signature-exists.yaml
+      params:
+        - name: digest
+          value: $(params.manifest_digest)
+        - name: reference
+          value: $(params.reference)
+        - name: identity
+          value: $(params.identity)
+        - name: secretName
+          value: $(tasks.collect-cosign-signing-params.results.cosign-secret-name)
+    - name: cosign-sign
+      retries: 5
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/cosign-sign/cosign-sign.yaml
+      params:
+        - name: identity
+          value: $(params.identity)
+        - name: reference
+          value: $(params.reference)
+        - name: digest
+          value: $(params.manifest_digest)
+        - name: signaturesFound
+          value: $(tasks.check-signature-exists.results.signaturesFound)
+        - name: secretName
+          value: $(tasks.collect-cosign-signing-params.results.cosign-secret-name)
+      workspaces:
+        - name: data
+          workspace: pipeline
+          subPath: signing
+      runAfter:
+        - collect-cosign-signing-params
+        - check-signature-exists

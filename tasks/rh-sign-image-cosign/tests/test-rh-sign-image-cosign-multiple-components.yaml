@@ -52,6 +52,47 @@ spec:
               cat > "$(workspaces.data.path)/signRegistryAccess.txt" << EOF
               test-product/test-image0
               EOF
+
+              cat > "$(workspaces.data.path)/data.json" << EOF
+              {
+                "mapping": {
+                  "defaults": {
+                    "pushSourceContainer": "true"
+                  }
+                },
+                "sign": {
+                  "request": "cosign-signing-pipeline",
+                  "requestType": "internal-request",
+                  "configMapName": "signing-config-map"
+                }
+              }
+              EOF
+              cat > "$(workspaces.data.path)/release_plan_admission.json" << EOF
+              {
+                "spec": {
+                  "pipeline": {
+                    "pipelineRef": {
+                      "resolver": "git",
+                      "params": [
+                        {
+                          "name": "url",
+                          "value": "https://localhost.git"
+                        },
+                        {
+                          "name": "revision",
+                          "value": "main"
+                        },
+                        {
+                          "name": "pathInRepo",
+                          "value": "pipelines/abc/abc.yaml"
+                        }
+                      ]
+                    },
+                    "serviceAccountName": "default"
+                  }
+                }
+              }
+              EOF
     - name: run-task
       taskRef:
         name: rh-sign-image-cosign
@@ -62,6 +103,16 @@ spec:
           value: 'test-cosign-secret-rekor'
         - name: signRegistryAccessPath
           value: signRegistryAccess.txt
+        - name: releasePlanAdmissionPath
+          value: "release_plan_admission.json"
+        - name: dataPath
+          value: data.json
+        - name: taskGitRevision
+          value: "main"
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: pipelineRunUid
+          value: $(context.pipelineRun.uid)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -84,45 +135,70 @@ spec:
               _TEST_PUB_REPO3="registry.stage.redhat.io/test-product/test-image1"
               _TEST_REPO1="quay.io/redhat-pending/test-product----test-image0"
               _TEST_REPO2="quay.io/redhat-pending/test-product----test-image1"
+              # shellcheck disable=SC2034
+              foundReferences=()
+              # shellcheck disable=SC2034
+              foundDigests=()
+              # shellcheck disable=SC2034
+              foundIdentities=()
+              while IFS= read -r name; do
+                ir=$(kubectl get internalrequest "$name" -o json)
+                params=$(jq -r ".spec.params" <<< "$ir")
+                refValue=$(jq -r '.reference' <<< "${params}")
+                digestValue=$(jq -r '.manifest_digest' <<< "${params}")
+                identityValue=$(jq -r '.identity' <<< "${params}")
+                echo "$params $refValue"
+                foundReferences+=("${refValue}")
+                foundDigests+=("${digestValue}")
+                foundIdentities+=("${identityValue}")
+              done < <(cat "$(workspaces.data.path)/mock_internal-request-names.txt")
 
-              EXPECTED=$(cat <<EOF
-              inspect --raw docker://quay.io/redhat-user-workloads/test-product/test-image0@sha256:0000
-              inspect --raw docker://quay.io/redhat-user-workloads/test-product/test-image1@sha256:1111
-              EOF
-              )
-              CALLS=$(cat "$(workspaces.data.path)/mock_skopeo_calls")
-              test "$CALLS" = "$EXPECTED"
+              expectedReferences=()
+              expectedReferences+=("${_TEST_REPO1}:t1")
+              expectedReferences+=("${_TEST_REPO1}:t2")
+              expectedReferences+=("${_TEST_REPO2}:t1")
+              expectedReferences+=("${_TEST_REPO2}:t2")
+              expectedDigests=()
+              expectedDigests+=("sha256:1111")
+              expectedDigests+=("sha256:1111-1")
+              expectedDigests+=("sha256:1111-2")
+              expectedDigests+=("sha256:1111-3")
+              expectedIdentities=()
+              expectedIdentities+=("${_TEST_PUB_REPO1}:t1")
+              expectedIdentities+=("${_TEST_PUB_REPO1}:t2")
+              expectedIdentities+=("${_TEST_PUB_REPO2}:t1")
+              expectedIdentities+=("${_TEST_PUB_REPO2}:t2")
+              expectedIdentities+=("${_TEST_PUB_REPO3}:t1")
+              expectedIdentities+=("${_TEST_PUB_REPO3}:t2")
 
-              CALLS=$(cat "$(workspaces.data.path)/mock_cosign_calls")
-              COSIGN_COMMON="-t 3m0s sign -y --rekor-url=https://fake-rekor-server --key aws://arn:mykey \
-              --sign-container-identity"
-              EXPECTED=$(cat <<EOF
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t1 ${_TEST_REPO1}@sha256:0000-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t2 ${_TEST_REPO1}@sha256:0000-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t1 ${_TEST_REPO1}@sha256:0000-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t2 ${_TEST_REPO1}@sha256:0000-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t1 ${_TEST_REPO1}@sha256:0000-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t2 ${_TEST_REPO1}@sha256:0000-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t1 ${_TEST_REPO1}@sha256:0000-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t2 ${_TEST_REPO1}@sha256:0000-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t1 ${_TEST_REPO1}@sha256:0000-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t2 ${_TEST_REPO1}@sha256:0000-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t1 ${_TEST_REPO1}@sha256:0000-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t2 ${_TEST_REPO1}@sha256:0000-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t1 ${_TEST_REPO1}@sha256:0000
-              $COSIGN_COMMON ${_TEST_PUB_REPO1}:t2 ${_TEST_REPO1}@sha256:0000
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t1 ${_TEST_REPO1}@sha256:0000
-              $COSIGN_COMMON ${_TEST_PUB_REPO2}:t2 ${_TEST_REPO1}@sha256:0000
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t1 ${_TEST_REPO2}@sha256:1111-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t2 ${_TEST_REPO2}@sha256:1111-1
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t1 ${_TEST_REPO2}@sha256:1111-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t2 ${_TEST_REPO2}@sha256:1111-2
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t1 ${_TEST_REPO2}@sha256:1111-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t2 ${_TEST_REPO2}@sha256:1111-3
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t1 ${_TEST_REPO2}@sha256:1111
-              $COSIGN_COMMON ${_TEST_PUB_REPO3}:t2 ${_TEST_REPO2}@sha256:1111
-              EOF
-              )
-              test "$CALLS" = "$EXPECTED"
+              echo "IR NAMES"
+
+              differenceReferences=$(echo "${expectedReferences[@]}" "${foundReferences[@]}" | tr ' ' '\n' \
+                | sort | uniq -u)
+
+              if [ -n "${differenceReferences}" ] ; then
+                echo "error: references expected compared to found do not match"
+                echo ""
+                echo "${differenceReferences}"
+                exit 1
+              fi
+              differenceIdentities=$(echo "${expectedIdentities[@]}" "${foundIdentities[@]}" | tr ' ' '\n' \
+                | sort | uniq -u)
+
+              if [ -n "${differenceIdentities}" ] ; then
+                echo "error: identities expected compared to found do not match"
+                echo ""
+                echo "${differenceIdentities}"
+                exit 1
+              fi
+              differenceDigests=$(echo "${expectedDigests[@]}" "${foundDigests[@]}" | tr ' ' '\n' \
+                | sort | uniq -u)
+
+              if [ -n "${differenceDigests}" ] ; then
+                echo "error: digests expected compared to found do not match"
+                echo ""
+                echo "${differenceDigests}"
+                exit 1
+              fi
       runAfter:
         - run-task

@@ -1,0 +1,77 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cosign-sign
+  labels:
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Sign container in cosign 
+  params:
+    - name: identity
+      description: Docker reference for the signed content, e.g. registry.stage.redhat.io/ubi8/ubi:latest
+      type: string
+    - name: reference
+      description: Docker reference container image to be signed, e.g. quay.io/redhat-pending/ubi8----ubi:latest
+      type: string
+    - name: digest
+      description: Manifest digest for the signed content
+      type: string
+    - name: signaturesFound
+      type: string
+      description: Number of signatures found for the given image and manifest digest
+    - name: secretName
+      description: Name of secret containing needed credentials
+      type: string
+  workspaces:
+    - name: data
+  steps:
+    - name: sign
+      image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+      env:
+        - name: AWS_DEFAULT_REGION
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: AWS_DEFAULT_REGION
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: AWS_SECRET_ACCESS_KEY
+        - name: SIGN_KEY
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: SIGN_KEY
+        - name: REKOR_URL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: REKOR_URL
+              optional: true
+      script: |
+        #!/usr/bin/env bash
+        set -eux
+        if [ "$(params.signaturesFound)" -gt 0 ]; then
+            echo "Signature already exists for $(params.reference) ($(params.digest))"
+            exit 0
+        fi
+        if [ -v REKOR_URL ]; then
+            COSIGN_COMMON_ARGS="-y --rekor-url=$REKOR_URL --key $SIGN_KEY"
+        else
+            COSIGN_COMMON_ARGS="--tlog-upload=false --key $SIGN_KEY"
+        fi
+        echo "Signing manifest $(params.reference) $(params.digest)"
+        cosign -t 3m0s sign \
+        "${COSIGN_COMMON_ARGS}" \
+        --sign-container-identity "$(params.identity)" "$(params.reference)"

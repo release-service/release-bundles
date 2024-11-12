@@ -124,6 +124,78 @@ _DOCKER_MANIFEST_LIST_OCI=$(cat <<EOF
 EOF
 )
 
+function internal-pipelinerun() {
+  TIMEOUT=30
+  END_TIME=$(date -ud "$TIMEOUT seconds" +%s)
+
+  echo Mock internal-pipelinerun called with: $*
+  echo $* >> $(workspaces.data.path)/mock_internal-pipelinerun.txt
+
+  # since we put the PLR in the background, we need to be able to locate it so we can
+  # get the name to patch it. We do this by tacking on another random label that we can use
+  # to select with later.
+  rando=$(openssl rand -hex 12)
+  /home/utils/internal-pipelinerun $@ -l "internal-services.appstudio.openshift.io/test-id=$rando" &
+
+  sleep 2
+  NAME=
+  while [[ -z ${NAME} ]]; do
+    if [ "$(date +%s)" -gt "$END_TIME" ]; then
+        echo "ERROR: Timeout while waiting to locate PipelineRun"
+        echo "Internal pipelineruns:"
+        kubectl get pr --no-headers -o custom-columns=":metadata.name" \
+            --sort-by=.metadata.creationTimestamp
+        exit 124
+    fi
+
+    NAME=$(kubectl get pr -l "internal-services.appstudio.openshift.io/test-id=$rando" \
+        --no-headers -o custom-columns=":metadata.name" \
+        --sort-by=.metadata.creationTimestamp | tail -1)
+    if [ -z $NAME ]; then
+        echo "Warning: Unable to get PLR name"
+        sleep 2
+    fi
+  done
+  echo "PLR Name: $NAME"
+
+  wait -n
+}
+
+function internal-request() {
+  TIMEOUT=30
+  END_TIME=$(date -ud "$TIMEOUT seconds" +%s)
+
+  echo Mock internal-request called with: $*
+  echo $* >> $(workspaces.data.path)/mock_internal-request.txt
+
+  # since we put the IR in the background, we need to be able to locate it so we can
+  # get the name to patch it. We do this by tacking on another random label that we can use
+  # to select with later.
+  rando=$(openssl rand -hex 12)
+  /home/utils/internal-request $@ -l "internal-services.appstudio.openshift.io/test-id=$rando" &
+
+  sleep 2
+  NAME=
+  while [[ -z ${NAME} ]]; do
+    if [ "$(date +%s)" -gt "$END_TIME" ]; then
+        echo "ERROR: Timeout while waiting to locate InternalRequest"
+        echo "Internal requests:"
+        kubectl get internalrequest --no-headers -o custom-columns=":metadata.name" \
+            --sort-by=.metadata.creationTimestamp
+        exit 124
+    fi
+
+    NAME=$(kubectl get internalrequest -l "internal-services.appstudio.openshift.io/test-id=$rando" \
+        --no-headers -o custom-columns=":metadata.name" \
+        --sort-by=.metadata.creationTimestamp | tail -1)
+    if [ -z $NAME ]; then
+        echo "Warning: Unable to get IR name"
+        sleep 2
+    fi
+  done
+  echo $NAME >> $(workspaces.data.path)/mock_internal-request-names.txt
+}
+
 function skopeo() {
   echo "$@" >> $(workspaces.data.path)/mock_skopeo_calls
   if [ "$1" = "inspect" ]; then

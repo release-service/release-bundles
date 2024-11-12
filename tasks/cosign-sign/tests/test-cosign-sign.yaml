@@ -1,0 +1,66 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-cosign-sign
+spec:
+  description: |
+    Test the cosign-sign task
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: prepare
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      params: []
+      taskSpec:
+        params: []
+        steps:
+          - image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+              touch "$(workspaces.data.path)/cosign_calls.txt"
+    - name: run-task
+      taskRef:
+        name: cosign-sign
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      params:
+        - name: digest
+          value: "sha256:0000"
+        - name: identity
+          value: "registry.stage.redhat.io/myproduct/myrepo:abc"
+        - name: reference
+          value: "quay.io/redhat-pending/myproduct----myrepo:abc"
+        - name: signaturesFound
+          value: "0"
+        - name: secretName
+          value: "test-cosign-sign-secret"
+      runAfter:
+        - prepare
+    - name: check-results
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      params: []
+      taskSpec:
+        params: []
+        steps:
+          - image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+              IDENTITY="--sign-container-identity registry.stage.redhat.io/myproduct/myrepo:abc"
+              REFERENCE="quay.io/redhat-pending/myproduct----myrepo:abc"
+              REKOR="--rekor-url=https://fake-rekor-server"
+              KEY="--key aws://arn:mykey"
+              cosign_call=$(cat "$(workspaces.data.path)/cosign_calls.txt")
+              if [ "$cosign_call" != "cosign -t 3m0s sign -y $REKOR $KEY $IDENTITY $REFERENCE" ]; then
+                echo "Expected cosign sign call, got $cosign_call"
+                exit 1
+              fi
+      runAfter:
+        - run-task

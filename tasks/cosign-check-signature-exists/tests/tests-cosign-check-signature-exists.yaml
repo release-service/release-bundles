@@ -1,0 +1,47 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-cosign-check-signature-exists
+spec:
+  description: |
+    Test signature exists check
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: run-task
+      taskRef:
+        name: cosign-check-signature-exists
+      params:
+        - name: pipeline_image
+          value: "quay.io/redhat-isv/operator-pipelines-images:released"
+        - name: digest
+          value: "sha256:0000"
+        - name: identity
+          value: "registry.stage.redhat.io/myproduct/myrepo:signed"
+        - name: reference
+          value: "quay.io/redhat-pending/myproduct----myrepo:signed"
+        - name: secretName
+          value: "test-cosign-check-signature-exists-secrets"
+      workspaces: []
+    - name: check-results
+      params:
+        - name: signaturesFound
+          value: $(tasks.run-task.results.signaturesFound)
+      taskSpec:
+        params:
+          - name: signaturesFound
+            description: Number of signatures found for the given image and manifest digest
+            type: string
+        steps:
+          - image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+              if [ "$(params.signaturesFound)" != "1" ]; then
+                echo "Expected 1 signature, got $(params.signaturesFound)"
+                exit 1
+              fi
+              
+      runAfter:
+        - run-task

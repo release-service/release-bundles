@@ -1,0 +1,58 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cosign-check-signature-exists
+  labels:
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Check if cosign signature exists for the given image and manifest digest
+  params:
+    - name: identity
+      description: Docker reference for the signed content, e.g. registry.stage.redhat.io/ubi8/ubi:latest
+      type: string
+    - name: reference
+      description: Docker reference container image to be signed, e.g. quay.io/redhat-pending/ubi8----ubi:latest
+      type: string
+    - name: digest
+      description: Manifest digest of the signed content
+      type: string
+    - name: secretName
+      description: Name of secret containing REKOR_URL and PUBLIC_KEY
+      type: string
+  results:
+    - name: signaturesFound
+      description: Number of signatures found for the given image and manifest digest
+      type: string
+  workspaces: []
+  steps:
+    - name: check-signature
+      image: quay.io/konflux-ci/release-service-utils:38c3bfd7479c86b832cba5b61f9bbde40c469393
+      env:
+        - name: REKOR_URL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: REKOR_URL
+              optional: true
+        - name: PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: PUBLIC_KEY
+              optional: false
+      script: |
+        #!/usr/bin/env bash
+        PUBLIC_KEY_FILE=$(mktemp)
+        echo -n "$PUBLIC_KEY" > "$PUBLIC_KEY_FILE"
+        set -eux
+        echo -n "0" > "$(results.signaturesFound.path)"
+        cosign verify --key "$PUBLIC_KEY_FILE" --rekor-url "$REKOR_URL" "$(params.reference)" | \
+        jq -j '[.[]|select(.critical.image."docker-manifest-digest" | '\
+        'contains("$(params.digest)"))|'\
+        'select(.critical.identity."docker-reference"|'\
+        'contains("$(params.identity)"))]|length' > "$(results.signaturesFound.path)"\
