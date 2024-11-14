@@ -1,0 +1,240 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: process-file-updates-task
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+      Update files in a Git repository
+  params:
+    - name: upstream_repo
+      type: string
+      description: Upstream Git repository
+    - name: repo
+      type: string
+      description: Git repository
+    - name: ref
+      type: string
+      description: Git branch
+    - name: paths
+      type: string
+      description: |
+          String containing a JSON array of file paths and its replacements or updates
+          E.g. '[{"path":"file1.yaml","replacements":[{"key":".yamlkey1,","replacement":"|regex|replace|"}]}]'
+    - name: application
+      type: string
+      description: Application being released
+    - name: file_updates_secret
+      type: string
+      default: "file-updates-secret"
+      description: The credentials used to update the git repo
+    - name: tempDir
+      type: string
+      default: "/tmp/$(context.taskRun.uid)/file-updates"
+      description: temp dir for cloning and updates
+  results:
+    - name: fileUpdatesInfo
+      description: fileUpdates detailed information
+    - name: fileUpdatesState
+      description: fileUpdates state
+  workspaces:
+    - name: data
+      description: workspace to read and save files
+  steps:
+    - name: perform-updates
+      image: quay.io/konflux-ci/release-service-utils@sha256:504e93b6435a6f10f825bacdbac9ac3da9be4cdfffdae10c0607cb8362928e50
+      env:
+        - name: GITLAB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: $(params.file_updates_secret)
+              key: gitlab_host
+        - name: ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: $(params.file_updates_secret)
+              key: gitlab_access_token
+        - name: GIT_AUTHOR_NAME
+          valueFrom:
+            secretKeyRef:
+              name: $(params.file_updates_secret)
+              key: git_author_name
+        - name: GIT_AUTHOR_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.file_updates_secret)
+              key: git_author_email
+        - name: TEMP
+          value: "$(params.tempDir)"
+      script: |
+        #!/usr/bin/env bash
+        set -eo pipefail
+
+        # loading git and gitlab functions
+        # shellcheck source=/dev/null
+        . /home/utils/gitlab-functions
+        # shellcheck source=/dev/null
+        . /home/utils/git-functions
+
+        echo "Temp Dir: $TEMP"
+        mkdir -p "$TEMP"
+
+        gitlab_init
+        git_functions_init
+
+        # saves the params.paths json to a file
+        updatePathsTmpfile="${TEMP}/updatePaths.json"
+        cat > "${updatePathsTmpfile}" << JSON
+        $(params.paths)
+        JSON
+
+        UPSTREAM_REPO="$(params.upstream_repo)"
+        REPO="$(params.repo)"
+        REVISION="$(params.ref)"
+
+        echo -e "=== UPDATING ${REPO} ON BRANCH ${REVISION} ===\n"
+
+        cd "${TEMP}"
+        git_clone_and_checkout --repository "${REPO}" --revision "${REVISION}"
+
+        # updating local branch with the upstream
+        git_rebase -n "glab-base" -r "${UPSTREAM_REPO}" -v "${REVISION}"
+        
+        replacementsUpdateError=
+        # getting the files that have replacements
+        cat "${updatePathsTmpfile}"
+        PATHS_LENGTH="$(jq '. | length' "${updatePathsTmpfile}")"
+        for (( PATH_INDEX=0; PATH_INDEX < PATHS_LENGTH; PATH_INDEX++ )); do
+          # getting the replacements for the file
+          cat "${updatePathsTmpfile}"
+          targetFile="$(jq -cr ".[${PATH_INDEX}].path" "${updatePathsTmpfile}")"
+    
+          seed=$(jq -cr ".[${PATH_INDEX}].seed // \"\"" "${updatePathsTmpfile}")
+                      
+          if [ -n "${seed}" ] ; then
+            echo "seed operation to perform"
+            targetDir=$(dirname "${targetFile}")
+            mkdir -p "${targetDir}"
+            echo "${seed}" > "${targetFile}"
+            git add "${targetFile}"
+            git status
+          fi
+    
+          REPLACEMENTS_LENGTH="$(jq -cr ".[${PATH_INDEX}].replacements | length" "${updatePathsTmpfile}")"
+          echo "Replacements to perform: ${REPLACEMENTS_LENGTH}"
+          REPLACEMENTS_PERFORMED=
+          if [ "${REPLACEMENTS_LENGTH}" -gt 0 ] ; then
+            REPLACEMENTS_PERFORMED=0
+            # we need to know how many empty newlines and `---` the file has before
+            # the actual yaml data starts excluding comments
+            blankLinesBeforeYaml="$(awk '/[[:alpha:]]+/{ if(! match($0, "^#")) { print NR-1; exit } }' "${targetFile}")"
+        
+            # check if the targetFile is a valid yaml file
+            if ! yq "${targetFile}" >/dev/null 2>&1; then
+              echo "fileUpdates: the targetFile ${targetFile} is not a yaml file" | \
+              tee "$(results.fileUpdatesInfo.path)"
+              exit 1
+            fi
+        
+            for (( REPLACEMENT_INDEX=0; REPLACEMENT_INDEX < REPLACEMENTS_LENGTH; REPLACEMENT_INDEX++ )); do
+              echo "REPLACEMENT: #${REPLACEMENT_INDEX}"
+              key="$(jq -cr ".[${PATH_INDEX}].replacements[${REPLACEMENT_INDEX}].key" "${updatePathsTmpfile}")"
+              replacement="$(jq -cr ".[${PATH_INDEX}].replacements[${REPLACEMENT_INDEX}].replacement" \
+                "${updatePathsTmpfile}")"
+      
+              # getting the key's position
+              echo -en "Searching for key \`${key}\`: "
+              yq "${key} | (line, .)" "${targetFile}" > "${TEMP}/found.txt"
+              cat "${TEMP}/found.txt"
+              foundAt=$(head -n 1 "${TEMP}/found.txt")
+              if (( foundAt == 0 )); then
+                  echo "NOT FOUND"
+                  continue
+              fi
+              echo "FOUND"
+      
+              sed -i '1d' "${TEMP}/found.txt"
+              # getting the value size (in number of lines)
+              valueSize=$(yq "${key}" "${targetFile}" | wc -l)
+              startBlock=$(( foundAt + blankLinesBeforeYaml ))
+      
+              # the replacement should be a sed expression using "|" as separator
+              if [[ $(tr -dc "|" <<< "${replacement}" | wc -m ) != 3 ]]; then
+                  replacementsUpdateError="Replace expression should be in '|search|replace|' format"
+                  break
+              fi
+      
+              # run the replace
+              cat "${targetFile}"
+              echo ""
+              sed -i "${startBlock},+${valueSize}s${replacement}" "${targetFile}"
+      
+              # get the replace part of "|search|replace|"
+              replaceStr=$(awk -F"|" '{print $3}' <<< "${replacement}")
+      
+              # when the value is a text block we must make sure
+              # only a single line was replaced and that the result
+              # block has the same number of lines as before
+              sed -ne "${startBlock},+${valueSize}p" "${targetFile}" > "${TEMP}/result.txt"
+              diff -u "${TEMP}/{found,result}.txt" > "${TEMP}/diff.txt" || true
+      
+              replacedBlockLines=$(wc -l < "${TEMP}/result.txt")
+              if [[ $replacedBlockLines != $(( valueSize +1 )) ]]; then
+                  replacementsUpdateError="Text block size differs from the original"
+                  break
+              fi
+      
+              # check if only a single line was replaced
+              replacedCount=$(sed -ne "${startBlock},+${valueSize}p" "${targetFile}" | grep -c "${replaceStr}")
+              if [[ $replacedCount != 1 ]]; then
+                  replacementsUpdateError="Too many lines replaced. Check if the replace expression isn't too greedy"
+                  break
+              fi
+              REPLACEMENTS_PERFORMED=$((REPLACEMENTS_PERFORMED + 1))
+            done
+          fi
+        done
+
+        if [ -n "${replacementsUpdateError}" ]; then
+            tempdiff=$(cat "${TEMP}/diff.txt")
+            # we need to limit the size to due to the max result buffer
+            diff=${tempdiff:1:3700} \
+            error="${replacementsUpdateError}" \
+            yq -o json --null-input '.str = strenv(diff), .error = strenv(error)' \
+            | tee "$(results.fileUpdatesInfo.path)"
+            echo -n "Failed" |tee "$(results.fileUpdatesState.path)"
+            # it should exit 0 otherwise the task does not set the results
+            # this way the InternalRequest can see what was wrong
+            exit 0
+        fi
+        if [ "${REPLACEMENTS_PERFORMED}" == 0 ] ;then
+            error="\"no replacements were performed\"" \
+            yq -o json --null-input '.str = strenv(error), .error = strenv(error)' \
+            | tee "$(results.fileUpdatesInfo.path)"
+            echo -n "Failed" |tee "$(results.fileUpdatesState.path)"
+            # it should exit 0 otherwise the task does not set the results
+            # this way the InternalRequest can see what was wrong
+            exit 0
+        fi
+
+        echo -e "\n*** START LOCAL CHANGES ***\n"
+        git diff
+        echo -e "\n*** END LOCAL CHANGES ***\n"
+
+        WORKING_BRANCH=$(uuidgen |awk '{print substr($1, 1, 8)}')
+        git_commit_and_push --branch "$WORKING_BRANCH" --message "fileUpdates changes"
+
+        echo "Creating Pull Request..."
+        GITLAB_MR_MSG="[Konflux release] $(params.application): fileUpdates changes ${WORKING_BRANCH}"
+        gitlab_create_mr --head "$WORKING_BRANCH" --target-branch "$REVISION" --title "${GITLAB_MR_MSG}" \
+            --description "${GITLAB_MR_MSG}" --upstream-repo "${UPSTREAM_REPO}" | jq '. | tostring' \
+            |tee -a "$(results.fileUpdatesInfo.path)"
+
+        echo -n "Success" |tee "$(results.fileUpdatesState.path)"
+
+        echo -e "=== FINISHED ===\n"

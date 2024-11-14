@@ -1,0 +1,75 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-process-file-updates-seed-error
+  annotations:
+    test/assert-task-failure: "run-task"
+spec:
+  description: |
+    Run the process-file-updates task with a single seed. Simulate an error
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              mkdir -p "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              cd "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              mkdir one-update
+              git init .
+    - name: run-task
+      taskRef:
+        name: process-file-updates-task
+      params:
+        - name: upstream_repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: ref
+          value: "main"
+        - name: paths
+          value: >-
+            [{"path":"test/seed-error.yaml","seed":"indexImage: \\ntom:"}]
+        - name: application
+          value: "scott"
+        - name: file_updates_secret
+          value: "file-updates-secret"
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+  finally:
+    - name: cleanup
+      params:
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      taskSpec:
+        params:
+          - name: tempDir
+            type: string
+        steps:
+          - name: delete-crs
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              rm -rf "$(params.tempDir)"
+      workspaces:
+        - name: data
+          workspace: tests-workspace

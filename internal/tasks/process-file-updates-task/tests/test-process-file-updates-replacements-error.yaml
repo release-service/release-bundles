@@ -1,0 +1,123 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-process-file-updates-replacements-error
+spec:
+  description: |
+    Run the process-file-updates task with a replacement for a key that does not exist.
+    The resulting task result should be provide a merge request url
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              mkdir -p "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              cd "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              mkdir one-update
+              cd one-update
+              git config --global init.defaultBranch main
+              git init .
+              git config --global user.email "test@test.com"
+              git config --global user.name "tester"
+  
+              mkdir addons
+              cat > "addons/my-addon2.yaml" << EOF
+              indexImage: 
+              name: test
+              EOF
+              git add addons/my-addon2.yaml
+              git commit -m "prior commit"
+    - name: run-task
+      taskRef:
+        name: process-file-updates-task
+      params:
+        - name: upstream_repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: ref
+          value: "main"
+        - name: paths
+          value: >-
+            [{"path":"addons/my-addon2.yaml","replacements":[{"key":".Bundle","replacement":"|Bundle.*|Bundle: Tom|"}]}]
+        - name: application
+          value: "scott"
+        - name: file_updates_secret
+          value: "file-updates-secret"
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+    - name: check-result
+      runAfter:
+        - run-task
+      params:
+        - name: fileUpdatesInfo
+          value: $(tasks.run-task.results.fileUpdatesInfo)
+        - name: fileUpdatesState
+          value: $(tasks.run-task.results.fileUpdatesState)
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      taskSpec:
+        params:
+          - name: fileUpdatesInfo
+            type: string
+          - name: fileUpdatesState
+            type: string
+          - name: tempDir
+            type: string
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            env:
+              - name: fileUpdatesInfo
+                value: "$(params.fileUpdatesInfo)"
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              echo "Test that status is Failed"
+              test "$(params.fileUpdatesState)" == "Failed"
+
+              echo "Get the error"
+              test "$(jq -r .error <<< "${fileUpdatesInfo:?}")" == "\"no replacements were performed\""
+
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+  finally:
+    - name: cleanup
+      params:
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      taskSpec:
+        params:
+          - name: tempDir
+            type: string
+        steps:
+          - name: delete-crs
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              rm -rf "$(params.tempDir)"
+      workspaces:
+        - name: data
+          workspace: tests-workspace

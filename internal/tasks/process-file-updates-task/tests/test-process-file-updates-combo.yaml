@@ -1,0 +1,128 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-process-file-updates-combo
+spec:
+  description: |
+    Run the process-file-updates task with a seed and a replacement. The resulting
+    task result should be provide a merge request url
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              mkdir -p "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              cd "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              mkdir one-update
+              cd one-update
+              git config --global init.defaultBranch main
+              git config --global user.email "test@test.com"
+              git config --global user.name "tester"
+              git init .
+    - name: run-task
+      taskRef:
+        name: process-file-updates-task
+      params:
+        - name: upstream_repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: repo
+          value: "https://some.gitlab/test/one-update.git"
+        - name: ref
+          value: "main"
+        - name: paths
+          value: >-
+            [{"path":"addons/my-addon2.yaml","seed":"indexImage: \\ntom:",
+            "replacements":[{"key":".indexImage","replacement":"|indexImage:.*|indexImage: Tom|"}]}]
+        - name: application
+          value: "scott"
+        - name: file_updates_secret
+          value: "file-updates-secret"
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+    - name: check-result
+      runAfter:
+        - run-task
+      params:
+        - name: fileUpdatesInfo
+          value: $(tasks.run-task.results.fileUpdatesInfo)
+        - name: fileUpdatesState
+          value: $(tasks.run-task.results.fileUpdatesState)
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      taskSpec:
+        params:
+          - name: fileUpdatesInfo
+            type: string
+          - name: fileUpdatesState
+            type: string
+          - name: tempDir
+            type: string
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              echo Test that merge_request can be parsed
+              test "$(jq -r .merge_request <<< "$(params.fileUpdatesInfo)")" == "/merge_request/1"
+              
+              cd "$(params.tempDir)/one-update"
+              commits=$(git log --oneline | wc -l)
+              echo "Test that only 1 commits is present"
+              test "${commits}" == "1"
+              
+              # we can take the last commit since 1st one was done by setup 
+              commitId=$(git log --oneline | awk '{print $1}' | tail -1)
+              changedFiles=$(git show -r "${commitId}" --name-only --oneline | tail -1)
+              echo "Test that files changed in commit correspond to updates"
+              test "${changedFiles}" == "addons/my-addon2.yaml"
+
+              cat > "/tmp/my-addon2.yaml" << EOF
+              indexImage: Tom
+              tom:
+              EOF
+              
+              echo "Testing that file present in working directory is what we expect"
+              diff -q "$(params.tempDir)/one-update/addons/my-addon2.yaml" "/tmp/my-addon2.yaml"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+  finally:
+    - name: cleanup
+      params:
+        - name: tempDir
+          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+      taskSpec:
+        params:
+          - name: tempDir
+            type: string
+        steps:
+          - name: delete-crs
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              rm -rf "$(params.tempDir)"
+      workspaces:
+        - name: data
+          workspace: tests-workspace

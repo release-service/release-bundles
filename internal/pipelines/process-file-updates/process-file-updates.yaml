@@ -1,0 +1,57 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: process-file-updates
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+      Tekton Pipeline to update files in Git repositories
+  params:
+    - name: upstream_repo
+      type: string
+      description: Upstream Git repository
+    - name: repo
+      type: string
+      description: Git repository
+    - name: ref
+      type: string
+      description: Git branch
+    - name: paths
+      type: string
+      description: |
+          String containing a JSON array of file paths and its updates and/or replacements
+          E.g. '[{"path":"file1.yaml","replacements":[{"key":".yamlkey1,","replacement":"|regex|replace|"}]}]'
+    - name: application
+      type: string
+      description: Application being released
+    - name: file_updates_secret
+      type: string
+      default: "file-updates-secret"
+      description: The credentials used to update the git repo
+  tasks:
+    - name: process-file-updates
+      taskRef:
+        name: process-file-updates-task
+      params:
+        - name: upstream_repo
+          value: $(params.upstream_repo)
+        - name: repo
+          value: $(params.repo)
+        - name: ref
+          value: $(params.ref)
+        - name: paths
+          value: $(params.paths)
+        - name: application
+          value: $(params.application)
+        - name: file_updates_secret
+          value: $(params.file_updates_secret)
+  results:
+    - name: jsonBuildInfo
+      value: $(tasks.process-file-updates.results.fileUpdatesInfo)
+    - name: buildState
+      value: $(tasks.process-file-updates.results.fileUpdatesState)
