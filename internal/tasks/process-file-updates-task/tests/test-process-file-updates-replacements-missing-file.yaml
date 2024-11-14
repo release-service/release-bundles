@@ -13,11 +13,11 @@ spec:
   tasks:
     - name: setup
       workspaces:
-        - name: data
+        - name: pipeline
           workspace: tests-workspace
       taskSpec:
         workspaces:
-          - name: data
+          - name: pipeline
         steps:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
@@ -25,8 +25,8 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              mkdir -p "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
-              cd "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+              mkdir -p "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
+              cd "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
               mkdir one-update
               cd one-update
               git config --global init.defaultBranch main
@@ -60,9 +60,9 @@ spec:
         - name: file_updates_secret
           value: "file-updates-secret"
         - name: tempDir
-          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+          value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
       workspaces:
-        - name: data
+        - name: pipeline
           workspace: tests-workspace
       runAfter:
         - setup
@@ -70,7 +70,7 @@ spec:
     - name: cleanup
       params:
         - name: tempDir
-          value: "$(workspaces.data.path)/$(context.pipelineRun.uid)/file-updates"
+          value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
       taskSpec:
         params:
           - name: tempDir
@@ -84,5 +84,5 @@ spec:
 
               rm -rf "$(params.tempDir)"
       workspaces:
-        - name: data
+        - name: pipeline
           workspace: tests-workspace

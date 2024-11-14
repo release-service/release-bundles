@@ -43,7 +43,7 @@ spec:
     - name: fileUpdatesState
       description: fileUpdates state
   workspaces:
-    - name: data
+    - name: pipeline
       description: workspace to read and save files
   steps:
     - name: perform-updates

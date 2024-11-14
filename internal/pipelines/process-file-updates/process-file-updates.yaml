@@ -33,6 +33,8 @@ spec:
       type: string
       default: "file-updates-secret"
       description: The credentials used to update the git repo
+  workspaces:
+    - name: pipeline
   tasks:
     - name: process-file-updates
       taskRef:
