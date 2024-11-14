@@ -52,6 +52,9 @@ spec:
           value: $(params.application)
         - name: file_updates_secret
           value: $(params.file_updates_secret)
+      workspaces:
+        - name: pipeline
+          workspace: pipeline
   results:
     - name: jsonBuildInfo
       value: $(tasks.process-file-updates.results.fileUpdatesInfo)
