@@ -1,7 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "additionalProperties": true,
   "properties": {
     "systems": {
       "type": "array",
@@ -13,7 +12,6 @@
     },
     "fbc": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "request": {
           "type": "string",
@@ -101,7 +99,6 @@
     },
     "releaseNotes": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "product_id": {
           "type": "integer",
@@ -155,7 +152,6 @@
         "cves": {
           "type": "array",
           "items": {
-            "additionalProperties": false,
             "type": "object",
             "properties": {
               "key": {
@@ -178,12 +174,10 @@
         },
         "issues": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "fixed": {
               "type": "array",
               "items": {
-                "additionalProperties": false,
                 "type": "object",
                 "properties": {
                   "id": {
@@ -201,13 +195,11 @@
         },
         "content": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "images": {
               "type": "array",
               "items": {
                 "type": "object",
-                "additionalProperties": false,
                 "properties": {
                   "containerImage": {
                     "type": "string",
@@ -242,7 +234,6 @@
                   },
                   "cves": {
                     "type": "object",
-                    "additionalProperties": false,
                     "properties": {
                       "fixed": {
                         "type": "object",
@@ -271,7 +262,6 @@
     },
     "sign": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "cosignSecretName": {
           "type": "string",
@@ -298,7 +288,6 @@
     },
     "github": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "githubSecret": {
           "type": "string",
@@ -308,7 +297,6 @@
     },
     "pyxis": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "secret": {
           "type": "string",
@@ -332,7 +320,6 @@
     },
     "slack": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "slack-notification-secret": {
           "type": "string",
@@ -354,13 +341,11 @@
     },
     "mapping": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "components": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": false,
             "properties": {
               "name": {
                 "type": "string",
@@ -396,7 +381,6 @@
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": false,
                       "properties": {
                         "filename": {
                           "type": "string",
@@ -445,7 +429,6 @@
         },
         "defaults": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "tags": {
               "type": "array",
@@ -472,7 +455,6 @@
     },
     "cdn": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "env": {
           "type": "string",
@@ -483,7 +465,6 @@
     },
     "mrrc": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "release": {
           "type": "string",
