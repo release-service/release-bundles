@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-rpm-data-to-pyxis
   labels:
-    app.kubernetes.io/version: "1.2.0"
+    app.kubernetes.io/version: "1.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -40,7 +40,7 @@ spec:
   steps:
     - name: download-sbom-files
       image:
-        quay.io/konflux-ci/release-service-utils:fb3aab1684422e897c2bac5acd57d5ecf42615ae
+        quay.io/konflux-ci/release-service-utils:f7adbd837f43941f161b6da830b2091267889e34
       script: |
         #!/usr/bin/env bash
         set -eux
@@ -92,12 +92,12 @@ spec:
           echo "ERROR: Expected to fetch sbom for $PYXIS_IMAGES images, but only $SBOM_COUNT were saved"
           exit 1
         fi
-        
+
         echo -n "${SBOM_PATH}" > "$(results.sbomPath.path)"
 
     - name: push-rpm-data-to-pyxis
       image:
-        quay.io/konflux-ci/release-service-utils:fb3aab1684422e897c2bac5acd57d5ecf42615ae
+        quay.io/konflux-ci/release-service-utils:f7adbd837f43941f161b6da830b2091267889e34
       env:
         - name: pyxisCert
           valueFrom:
