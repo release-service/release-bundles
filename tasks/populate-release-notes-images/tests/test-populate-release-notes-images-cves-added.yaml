@@ -41,6 +41,13 @@ spec:
                     },
                     {
                       "component": "comp",
+                      "key": "CVE-123",
+                      "summary": "",
+                      "uploadDate": "01-01-1980",
+                      "url": ""
+                    },
+                    {
+                      "component": "comp",
                       "packages": [
                         "pkg3"
                       ],
@@ -126,5 +133,7 @@ spec:
               test $(jq '.releaseNotes.content.images[0].cves.fixed | length' "$(workspaces.data.path)/data.json") == 2
               test "$(jq -jr '.releaseNotes.content.images[0].cves.fixed | keys[]' $(workspaces.data.path)/data.json)" \
                 == "CVE-123CVE-456"
+              test "$(jq '.releaseNotes.content.images[1].cves.fixed."CVE-123".packages | length' \
+                "$(workspaces.data.path)/data.json")" == 0
       runAfter:
         - run-task

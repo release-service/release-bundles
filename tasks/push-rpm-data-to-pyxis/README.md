@@ -13,6 +13,12 @@ all repository_id strings found in rpm purl strings in the sboms.
 | server          | The server type to use. Options are 'production','production-internal,'stage-internal' and 'stage'. | Yes      | production    |
 | concurrentLimit | The maximum number of images to be processed at once                                                | Yes      | 4             |
 
+## Changes in 1.1.0
+* Added support for SPDX sbom format
+  * If sbom format is SPDX, call `upload_rpm_data`, if it's CycloneDX, call
+    `upload_rpm_data_cyclonedx`
+  * The image is updated to include the new functionality
+
 ## Changes in 1.0.3
 * Updated the step image used in this task
   * Added handling for sbom entries that do not explicitly specify the publisher.
