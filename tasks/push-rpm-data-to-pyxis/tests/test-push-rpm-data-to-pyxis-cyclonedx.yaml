@@ -2,11 +2,12 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-push-rpm-data-to-pyxis-single-arch
+  name: test-push-rpm-data-to-pyxis-cyclonedx
 spec:
   description: |
     Run the push-rpm-data-to-pyxis task with required parameters and single arch
-    images - a happy path scenario.
+    images - a happy path scenario. The sboms are in cyclonedx format, so
+    upload_rpm_data_cyclonedx script will be used.
   workspaces:
     - name: tests-workspace
   tasks:
@@ -32,7 +33,7 @@ spec:
                     "pyxisImages": [
                       {
                         "arch": "amd64",
-                        "imageId": "myImageID1",
+                        "imageId": "myImageID1cyclonedx",
                         "digest": "mydigest1",
                         "arch_digest": "mydigest1",
                         "os": "linux"
@@ -44,7 +45,7 @@ spec:
                     "pyxisImages": [
                       {
                         "arch": "amd64",
-                        "imageId": "myImageID3",
+                        "imageId": "myImageID3cyclonedx",
                         "digest": "mydigest2",
                         "arch_digest": "mydigest2",
                         "os": "linux"
@@ -89,9 +90,9 @@ spec:
                 exit 1
               fi
 
-              if [ "$(wc -l < "$(workspaces.data.path)/mock_upload_rpm_data.txt")" != 2 ]; then
-                echo Error: upload_rpm_data was expected to be called 2 times. Actual calls:
-                cat "$(workspaces.data.path)/mock_upload_rpm_data.txt"
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_upload_rpm_data_cyclonedx.txt")" != 2 ]; then
+                echo Error: upload_rpm_data_cyclonedx was expected to be called 2 times. Actual calls:
+                cat "$(workspaces.data.path)/mock_upload_rpm_data_cyclonedx.txt"
                 exit 1
               fi
 

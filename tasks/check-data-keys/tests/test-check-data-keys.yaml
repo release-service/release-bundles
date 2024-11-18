@@ -32,6 +32,26 @@ spec:
                   "product_stream": "rhtas-tp1",
                   "cpe": "cpe:/a:example:openstack:el8",
                   "type": "RHSA",
+                  "cves": [
+                    {
+                      "key": "CVE-123",
+                      "component": "my-component-1"
+                    },
+                    {
+                      "key": "CVE-456",
+                      "component": "my-component-2",
+                      "packages": [
+                        "my-package1",
+                        "my-package2"
+                      ]
+                    },
+                    {
+                      "key": "CVE-789",
+                      "component": "my-component-3",
+                      "packages": [
+                      ]
+                    }
+                  ],
                   "issues": {
                     "fixed": [
                       {
@@ -58,7 +78,7 @@ spec:
                         "cves": {
                           "fixed": {
                             "CVE-2022-1234": {
-                              "components": [
+                              "packages": [
                                 "pkg:golang/golang.org/x/net/http2@1.11.1"
                               ]
                             }

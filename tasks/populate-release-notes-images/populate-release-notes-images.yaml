@@ -65,8 +65,8 @@ spec:
             for ((j = 0; j < $NUM_CVES; j++)); do
                 cve=$(jq -c --argjson j "$j" '.[$j]' <<< "$CVES")
                 cveJson=$(jq -n \
-                    --arg id $(jq -r '.key' <<< $cve) \
-                    --argjson packages $(jq -c '.packages' <<< $cve) \
+                    --arg id "$(jq -r '.key' <<< "$cve")" \
+                    --argjson packages "$(jq -c '.packages // []' <<< "$cve")" \
                     '{($id): {"packages": $packages}}')
                 CVEsJson=$(jq --argjson cve "$cveJson" '.cves.fixed += $cve' <<< $CVEsJson)
             done
