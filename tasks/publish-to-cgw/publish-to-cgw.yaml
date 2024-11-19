@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: publish-to-cgw
   labels:
-    app.kubernetes.io/version: "0.2.4"
+    app.kubernetes.io/version: "0.2.5"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -85,10 +85,11 @@ spec:
         productName = data['contentGateway']['productName']
         productCode = data['contentGateway']['productCode']
         productVersionName = data['contentGateway']['productVersionName']
+        mirrorOpenshiftPush = data['contentGateway'].get('mirrorOpenshiftPush')
         components = data['contentGateway']['components']
         content_list = os.listdir(CONTENT_DIR)
 
-        # Default values for each component, 
+        # Default values for each component,
         # values from DATA_FILE takes presedence over these
         default_values_per_component = {
             'type': "FILE",
@@ -98,7 +99,7 @@ spec:
 
         def generate_download_url(file_name):
             """
-            Generate a download URL in this format: 
+            Generate a download URL in this format:
             /content/origin/files/sha256/{checksum[:2]}{checksum}/{file_name}
             """
             prefix = "/content/origin/files/sha256"
@@ -114,7 +115,9 @@ spec:
             Generate metadata for each file in
             content_list that starts with the component name
             """
-            shortURL_base = '/pub/cgw'
+            shortURL_base = '/pub/'
+            if mirrorOpenshiftPush:
+                shortURL_base = '/pub/cgw'
             metadata = []
             shasum_files_processed = []
             for file in content_list:
@@ -199,9 +202,9 @@ spec:
             print(f" ERROR:\n{command_output}")
             raise
 
-        result_data = {"no_of_files_processed": len(metadata), 
-                      "metadata_file_path": METADATA_FILE_PATH, 
-                      "command_output": command_output}
+        result_data = {"no_of_files_processed": len(metadata),
+                        "metadata_file_path": METADATA_FILE_PATH,
+                        "command_output": command_output}
 
         with open(RESULT_FILE_JSON_PATH, 'w') as f:
             json.dump(result_data, f)

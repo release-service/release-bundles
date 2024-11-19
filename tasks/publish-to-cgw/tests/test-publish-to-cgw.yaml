@@ -51,6 +51,7 @@ spec:
               cat > $(workspaces.data.path)/data.json << EOF
               {
                 "contentGateway": {
+                  "mirrorOpenshiftPush": true,
                   "productName": "product_name_1",
                   "productCode": "product_code_1",
                   "productVersionName": "1.1",
