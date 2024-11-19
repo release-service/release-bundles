@@ -432,6 +432,9 @@
                           "type": "string",
                           "description": "Description propogated to Content Gateway"
                         }
+                      }
+                    }
+                  }
                 }
               },
               "pushSourceContainer": {
