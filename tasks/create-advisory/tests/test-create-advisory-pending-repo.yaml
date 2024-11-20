@@ -167,6 +167,13 @@ spec:
                 echo "InternalRequest has the wrong advisory_secret_name parameter"
                 exit 1
               fi
+
+              # Check the errata_secret_name parameter
+              if [ "$(echo "$internalRequest" | jq -r '.spec.params.errata_secret_name' )" != \
+                "errata-stage-service-account" ]; then
+                echo "InternalRequest has the wrong errata_secret_name parameter"
+                exit 1
+              fi
   finally:
     - name: cleanup
       taskSpec:

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-advisory
   labels:
-    app.kubernetes.io/version: "4.4.2"
+    app.kubernetes.io/version: "4.4.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -99,7 +99,9 @@ spec:
         # these are their secret names
         #
         prodSecretName="create-advisory-prod-secret"
+        prodErrataSecretName="errata-prod-service-account"
         stagingSecretName="create-advisory-stage-secret"
+        stagingErrataSecretName="errata-stage-service-account"
         #
         # detect which one to use based on repositories specified
         #
@@ -150,8 +152,10 @@ spec:
         # is true.
         #
         advisorySecretName="${prodSecretName}"
+        errataSecretName="${prodErrataSecretName}"
         if [ "${foundPendingRepositories}" == "true" ]; then
           advisorySecretName="${stagingSecretName}"
+          errataSecretName="${stagingErrataSecretName}"
         fi
 
         echo "Creating InternalRequest to create advisory..."
@@ -161,6 +165,7 @@ spec:
                          -p advisory_json="${advisoryData}" \
                          -p config_map_name="${configMapName}" \
                          -p advisory_secret_name="${advisorySecretName}" \
+                         -p errata_secret_name="${errataSecretName}" \
                          -s "$(params.synchronously)" \
                          -l ${pipelinerun_label}="$(params.pipelineRunUid)" \
                          > "$(workspaces.data.path)"/ir-result.txt || \
