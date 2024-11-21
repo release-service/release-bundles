@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-rpm-data-to-pyxis
   labels:
-    app.kubernetes.io/version: "1.3.0"
+    app.kubernetes.io/version: "1.3.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -54,7 +54,9 @@ spec:
         NUM_COMPONENTS=$(jq '.components | length' "${PYXIS_FILE}")
 
         SBOM_PATH="$(dirname "$(params.pyxisJsonPath)")/downloaded-sboms"
-        mkdir "$(workspaces.data.path)/${SBOM_PATH}"
+        # The dir might already exist in case of retries of the task.
+        # No need for a cleanup - we will just override the files.
+        mkdir -p "$(workspaces.data.path)/${SBOM_PATH}"
         cd "$(workspaces.data.path)/${SBOM_PATH}"
         DOCKER_CONFIG="$(mktemp -d)"
         export DOCKER_CONFIG
