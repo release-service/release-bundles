@@ -13,6 +13,9 @@ Tekton task to push snapshot images to an image registry using `cosign copy`.
 | caTrustConfigMapName | The name of the ConfigMap to read CA bundle data from                     | Yes      | trusted-ca    |
 | caTrustConfigMapKey  | The name of the key in the ConfigMap that contains the CA bundle data     | Yes      | ca-bundle.crt |
 
+## Changes in 6.4.0
+* Bump release-service-utils to upgrade the get-image-architecture script which can properly handle a Tekton bundle
+
 ## Changes in 6.3.0
 * Add support for custom CA cert in push-snapshot task
 

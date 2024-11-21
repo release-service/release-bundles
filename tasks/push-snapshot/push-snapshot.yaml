@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-snapshot
   labels:
-    app.kubernetes.io/version: "6.3.0"
+    app.kubernetes.io/version: "6.4.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -38,7 +38,7 @@ spec:
       description: The workspace where the snapshot spec and data json files reside
   steps:
     - name: push-snapshot
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:5e9ee4c1d6cb3484d227c31557be3f476a4f3d7f
       script: |
         #!/usr/bin/env bash
         set -eux
