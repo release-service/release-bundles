@@ -32,10 +32,10 @@ spec:
               git init .
               git config --global user.email "test@test.com"
               git config --global user.name "tester"
-  
+
               mkdir addons
               cat > "addons/my-addon2.yaml" << EOF
-              indexImage: 
+              indexImage:
               name: test
               EOF
               git add addons/my-addon2.yaml
@@ -60,6 +60,8 @@ spec:
           value: "file-updates-secret"
         - name: tempDir
           value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
+        - name: internalRequestPipelineRunName
+          value: $(context.pipelineRun.name)
       workspaces:
         - name: pipeline
           workspace: tests-workspace
@@ -92,13 +94,13 @@ spec:
 
               echo Test that merge_request can be parsed
               test "$(jq -r .merge_request <<< "$(params.fileUpdatesInfo)")" == "/merge_request/1"
-              
+
               cd "$(params.tempDir)/one-update"
               commits=$(git log --oneline | wc -l)
               echo "Test that only 2 commits are present"
               test "${commits}" == "2"
-              
-              # we can take the last commit since 1st one was done by setup 
+
+              # we can take the last commit since 1st one was done by setup
               commitId=$(git log --oneline | awk '{print $1}' | tail -1)
               changedFiles=$(git show -r "${commitId}" --name-only --oneline | tail -1)
               echo "Test that files changed in commit correspond to updates"
@@ -108,7 +110,7 @@ spec:
               indexImage: Tom
               name: test
               EOF
-              
+
               echo "Testing that file present in working directory is what we expect"
               diff -q "$(params.tempDir)/one-update/addons/my-addon2.yaml" "/tmp/my-addon2.yaml"
       workspaces:

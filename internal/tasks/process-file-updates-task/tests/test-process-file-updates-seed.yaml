@@ -48,6 +48,8 @@ spec:
           value: "file-updates-secret"
         - name: tempDir
           value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
+        - name: internalRequestPipelineRunName
+          value: $(context.pipelineRun.name)
       workspaces:
         - name: pipeline
           workspace: tests-workspace
@@ -80,12 +82,12 @@ spec:
 
               echo Test that merge_request can be parsed
               test "$(jq -r .merge_request <<< "$(params.fileUpdatesInfo)")" == "/merge_request/1"
-              
+
               cd "$(params.tempDir)/one-update"
               commits=$(git log --oneline | wc -l)
               echo "Test that only 1 commit was made"
               test "${commits}" == "1"
-              
+
               commitId=$(git log --oneline | cut -f1 -d" ")
               changedFiles=$(git show -r "${commitId}" --name-only --oneline | tail -1)
               echo "Test that files changed in commit correspond to updates"

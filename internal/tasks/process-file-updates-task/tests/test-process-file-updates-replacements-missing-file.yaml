@@ -33,10 +33,10 @@ spec:
               git init .
               git config --global user.email "test@test.com"
               git config --global user.name "tester"
-  
+
               mkdir addons
               cat > "addons/my-addon2.yaml" << EOF
-              indexImage: 
+              indexImage:
               name: test
               EOF
               git add addons/my-addon2.yaml
@@ -61,6 +61,8 @@ spec:
           value: "file-updates-secret"
         - name: tempDir
           value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
+        - name: internalRequestPipelineRunName
+          value: $(context.pipelineRun.name)
       workspaces:
         - name: pipeline
           workspace: tests-workspace

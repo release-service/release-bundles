@@ -48,6 +48,8 @@ spec:
           value: "file-updates-secret"
         - name: tempDir
           value: "$(workspaces.pipeline.path)/$(context.pipelineRun.uid)/file-updates"
+        - name: internalRequestPipelineRunName
+          value: $(context.pipelineRun.name)
       workspaces:
         - name: pipeline
           workspace: tests-workspace
