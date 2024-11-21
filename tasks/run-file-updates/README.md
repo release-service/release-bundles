@@ -16,6 +16,9 @@ the field `spec.data.fileUpdates` in the ReleasePlanAdmission resource.
 | resultsDirPath     | Path to results directory in the data workspace                                           | No       | -                        |
 
 
+## Changes in 2.0.1
+* fix typo in default value for `jq`
+
 ## Changes in 2.0.0
 * new mandatory parameter resultsDirPath added
 * the task now supplies created merge requests to update Release CR status task.

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: run-file-updates
   labels:
-    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/version: "2.0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -53,7 +53,7 @@ spec:
 
         # Obtain application from snapshot
         application=$(jq -rc .application $(workspaces.data.path)/$(params.snapshotPath))
-        
+
         # Extract the key from the JSON file
         fileUpdates=$(jq -rc "$(params.jsonKey)" $(workspaces.data.path)/$(params.fileUpdatesPath))
 
@@ -105,7 +105,7 @@ spec:
 
           results=$(jq -r '.status.results' <<< "${IRjson}")
           internalRequestPipelineRunName="$(jq -jr '.internalRequestPipelineRunName // ""' <<< "${results}")"
-          internalRequestTaskRunName="$(jq -jr '.internalRequestTaskRunName / ""' <<< "${results}")"
+          internalRequestTaskRunName="$(jq -jr '.internalRequestTaskRunName // ""' <<< "${results}")"
 
           echo "** internalRequestPipelineRunName: ${internalRequestPipelineRunName}"
           echo "** internalRequestTaskRunName: ${internalRequestTaskRunName}"
