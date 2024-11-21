@@ -63,11 +63,6 @@ Overall explanation of what this commit is achieving and the motivation behind i
 Signed-off-by: Your Name <your-name@your-email.com>
 ```
 
-### Signing commits
-
-This project also enforces GPG signed commits. More information on commit signing and how to do it can be found in the [git official docs](
-https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work) or in [this GitHub guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You can see whether or not the commit was successfully signed by the `Verified` bubble next to your commit in the GitHub UI or using `git log`.
-
 ### Pull Requests
 
 All changes must come from a pull request (PR) and cannot be directly committed. While anyone can engage in activity on a PR, pull requests are only approved by team members.
