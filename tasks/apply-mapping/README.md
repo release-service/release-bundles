@@ -31,6 +31,9 @@ You can also expand image labels, e.g. "{{ labels.mylabel }}" -> The value of im
 | dataPath          | Path to the JSON string of the merged data to use in the data workspace                      | No       | -             |
 | failOnEmptyResult | Fail the task if the resulting snapshot contains zero components                             | Yes      | false         |
 
+## Changes in 1.8.1
+* Fixed substitution logic to prevent incomplete replacements in `translate_tags`.
+
 ## Changes in 1.8.0
 * Enhanced tag generation by adding support for the {{ incrementer }} variable:
   * The {{ incrementer }} variable automatically finds the highest existing incremented tag
