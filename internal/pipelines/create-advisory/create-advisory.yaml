@@ -1,0 +1,57 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: create-advisory
+  labels:
+    app.kubernetes.io/version: "0.5.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: advisory
+spec:
+  description: >-
+      Pipeline to push an advisory yaml to a Git repository
+  params:
+    - name: advisory_json
+      type: string
+      description: |
+          String containing a JSON representation of the advisory data (e.g. '{"product_id":123,"type":"RHSA"}')
+    - name: application
+      type: string
+      description: Application being released
+    - name: origin
+      type: string
+      description: |
+          The origin workspace where the release CR comes from.
+          This is used to determine the advisory path
+    - name: config_map_name
+      type: string
+      description: The name of the configMap that contains the signing key
+    - name: advisory_secret_name
+      type: string
+      description: The name of the secret that contains the advisory creation metadata
+    - name: errata_secret_name
+      type: string
+      description: The name of the secret that contains the errata service account metadata
+  tasks:
+    - name: create-advisory-task
+      taskRef:
+        name: create-advisory-task
+      params:
+        - name: advisory_json
+          value: $(params.advisory_json)
+        - name: application
+          value: $(params.application)
+        - name: origin
+          value: $(params.origin)
+        - name: config_map_name
+          value: $(params.config_map_name)
+        - name: advisory_secret_name
+          value: $(params.advisory_secret_name)
+        - name: errata_secret_name
+          value: $(params.errata_secret_name)
+  results:
+    - name: result
+      value: $(tasks.create-advisory-task.results.result)
+    - name: advisory_url
+      value: $(tasks.create-advisory-task.results.advisory_url)
