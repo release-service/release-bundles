@@ -13,6 +13,11 @@ Tekton task to push snapshot images to an image registry using `cosign copy`.
 | caTrustConfigMapName | The name of the ConfigMap to read CA bundle data from                     | Yes      | trusted-ca    |
 | caTrustConfigMapKey  | The name of the key in the ConfigMap that contains the CA bundle data     | Yes      | ca-bundle.crt |
 
+## Changes in 6.4.1
+* Bump release-service-utils image
+  * The updated image will fail if skopeo inspect fails
+* Fix authentication for skopeo inspect when running get-image-architectures
+
 ## Changes in 6.4.0
 * Bump release-service-utils to upgrade the get-image-architecture script which can properly handle a Tekton bundle
 

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-snapshot
   labels:
-    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/version: "6.4.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -38,7 +38,7 @@ spec:
       description: The workspace where the snapshot spec and data json files reside
   steps:
     - name: push-snapshot
-      image: quay.io/konflux-ci/release-service-utils:5e9ee4c1d6cb3484d227c31557be3f476a4f3d7f
+      image: quay.io/konflux-ci/release-service-utils:76021ef1e9f0f14397260ee24c9a43e37d3f83ac
       script: |
         #!/usr/bin/env bash
         set -eux
@@ -73,6 +73,9 @@ spec:
               echo "Max retries exceeded."
               exit 1
             fi
+            # Only the cosign call above needs this custom Docker config. Unset it, so that skopeo call
+            # in get-image-architecture uses the default config in ~/.docker/config.json (this one would break it)
+            unset DOCKER_CONFIG
           else
             printf '* Component push skipped (source digest exists at destination): %s (%s)\n' \
               "$2" "$3"
