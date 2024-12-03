@@ -4,16 +4,16 @@ Creates an InternalRequest to sign a base64 encoded blob
 
 ## Parameters
 
-| Name                 | Description                                                                               | Optional | Default value          |
-|----------------------|-------------------------------------------------------------------------------------------|----------|------------------------|
-| dataPath             | Path to the JSON string of the merged data to use in the data workspace                   | No       | -                      |
-| request              | Signing pipeline name to handle this request                                              | Yes      | hacbs-signing-pipeline |
-| referenceImage       | The image to be signed                                                                    | No       | -                      |
-| manifestDigestImage  | Manifest Digest Image used to extract the SHA                                             | Yes      | ""                     |
-| requester            | Name of the user that requested the signing, for auditing purposes                        | No       | -                      |
-| requestTimeout       | InternalRequest timeout                                                                   | Yes      | 180                    |
-| binariesPath         | The directory inside the workspace where the binaries are stored                          | Yes      | binaries               |
-| pipelineRunUid       | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                      |
+| Name                 | Description                                                                               | Optional | Default value         |
+|----------------------|-------------------------------------------------------------------------------------------|----------|-----------------------|
+| dataPath             | Path to the JSON string of the merged data to use in the data workspace                   | No       | -                     |
+| request              | Signing pipeline name to handle this request                                              | Yes      | blob-signing-pipeline |
+| referenceImage       | The image to be signed                                                                    | No       | -                     |
+| manifestDigestImage  | Manifest Digest Image used to extract the SHA                                             | Yes      | ""                    |
+| requester            | Name of the user that requested the signing, for auditing purposes                        | No       | -                     |
+| requestTimeout       | InternalRequest timeout                                                                   | Yes      | 180                   |
+| binariesPath         | The directory inside the workspace where the binaries are stored                          | Yes      | binaries              |
+| pipelineRunUid       | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                     |
 
 ## Signing data parameters
 
