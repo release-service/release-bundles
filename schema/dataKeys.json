@@ -441,6 +441,51 @@
                   }
                 }
               },
+              "productInfo": {
+                "type": "object",
+                "properties": {
+                  "productName": {
+                    "type": "string",
+                    "description": "productName in content gateway"
+                  },
+                  "productCode": {
+                    "type": "string",
+                    "description": "productCode in content gateway"
+                  },
+                  "productVersionName": {
+                    "type": "string",
+                    "description": "productVersionName in content gateway"
+                  }
+                }
+              },
+              "starmap": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Artifact name"
+                    },
+                    "workflow": {
+                      "type": "string",
+                      "description": "Push workflow"
+                    },
+                    "cloud": {
+                      "type": "string",
+                      "description": "Cloud provider's name"
+                    },
+                    "mappings": {
+                      "type": "object",
+                      "description": "Mappings for the given artifact"
+                    },
+                    "billing-code-config": {
+                      "type": "object",
+                      "description": "Billing configuration for the community worklow"
+                    }
+                  }
+                }
+              },
               "pushSourceContainer": {
                 "type": "boolean",
                 "description": "Indicates if the source container should be pushed"
@@ -475,6 +520,10 @@
         "registrySecret": {
           "type": "string",
           "description": "The k8s secret containing token for quay.io API"
+        },
+        "cloudMarketplacesSecret": {
+          "type": "string",
+          "description": "Secret for cloud marketplaces"
         }
       }
     },
