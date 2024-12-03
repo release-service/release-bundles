@@ -12,6 +12,8 @@ Creates an InternalRequest to sign an index image
 | requester            | Name of the user that requested the signing, for auditing purposes                        | No       | -                      |
 | requestTimeout       | InternalRequest timeout                                                                   | Yes      | 180                    |
 | pipelineRunUid       | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                      |
+| taskGitUrl           | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -                      |
+| taskGitRevision      | The revision in the taskGitUrl repo to be used                                            | No       | -                      |
 
 ## Signing data parameters
 
@@ -25,6 +27,11 @@ data:
         pipelineImage: <image pullspec>
         configMapName: <configmap name>
 ```
+
+## Changes in 4.0.0
+* Added new task parameters `taskGitRevision` and `taskGitUrl`
+  * These are passed to the InternalRequest as they are required parameters of the `simple-signing-pipeline`
+* The default for `sign.request` is now `simple-signing-pipeline` instead of being `hacbs-signing-pipeline`
 
 ## Changes in 3.4.0
 * Removed the `request` parameter and references of `fbc.request` from the task and set the default

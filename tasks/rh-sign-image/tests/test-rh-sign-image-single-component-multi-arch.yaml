@@ -44,7 +44,6 @@ spec:
               cat > "$(workspaces.data.path)/data.json" << EOF
               {
                 "sign": {
-                  "request": "hacbs-signing-pipeline",
                   "configMapName": "signing-config-map"
                 }
               }

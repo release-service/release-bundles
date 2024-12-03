@@ -20,6 +20,10 @@ Task to create internalrequests or pipelineruns to sign snapshot components
 | signRegistryAccessPath   | The relative path in the workspace to a text file that contains a list of repositories that needs registry.access.redhat.com image references to be signed (i.e. requires_terms=true), one repository string per line, e.g. "rhtas/cosign-rhel9". | No       | -             |
 
 
+## Changes in 5.0.1
+* The default for `sign.request` is now always `simple-signing-pipeline` instead of being `hacbs-signing-pipeline`
+  if using InternalRequests
+
 ## Changes in 5.0.0
 * Added mandatory parameter `signRegistryAccessPath`.
   * The relative path in the workspace to a text file that contains a list of repositories

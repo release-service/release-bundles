@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: sign-index-image
   labels:
-    app.kubernetes.io/version: "3.4.0"
+    app.kubernetes.io/version: "4.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -31,6 +31,16 @@ spec:
     - name: pipelineRunUid
       type: string
       description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: taskGitUrl
+      type: string
+      description: |
+        The url to the git repo where the release-service-catalog tasks to be used are stored. This is passed to
+        the InternalRequest as it is needed by the simple-signing-pipeline
+    - name: taskGitRevision
+      type: string
+      description: |
+        The revision in the taskGitUrl repo to be used. This is passed to the InternalRequest as it is needed by the
+        simple-signing-pipeline
   workspaces:
     - name: data
       description: workspace to read and save files
@@ -48,7 +58,7 @@ spec:
             exit 1
         fi
 
-        request=$(jq -r '.sign.request // "hacbs-signing-pipeline"' "${DATA_FILE}")
+        request=$(jq -r '.sign.request // "simple-signing-pipeline"' "${DATA_FILE}")
         default_pipeline_image="quay.io/redhat-isv/operator-pipelines-images:released"
         pipeline_image=$(jq -r --arg default_pipeline_image "${default_pipeline_image}" \
             '.sign.pipelineImage // .fbc.pipelineImage // $default_pipeline_image' "${DATA_FILE}")
@@ -75,6 +85,8 @@ spec:
               -p manifest_digest="${manifest_digest}" \
               -p requester="$(params.requester)" \
               -p config_map_name="${config_map_name}" \
+              -p taskGitUrl="$(params.taskGitUrl)" \
+              -p taskGitRevision="$(params.taskGitRevision)" \
               -t "$(params.requestTimeout)" \
               -l "${pipelinerun_label}"="$(params.pipelineRunUid)"
           echo "done"

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: rh-sign-image
   labels:
-    app.kubernetes.io/version: "5.0.0"
+    app.kubernetes.io/version: "5.0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -114,7 +114,6 @@ spec:
         service_account_name=$(jq -r '.spec.pipeline.serviceAccountName // "appstudio-pipeline"' "${RPA_FILE}")
         if [ "${REQUESTTYPE}" == "internal-pipelinerun" ] ; then
           requestType=internal-pipelinerun
-          defaultRequest="simple-signing-pipeline"
           EXTRA_ARGS=(
           --task-git-url "$(params.taskGitUrl)"
           --task-git-revision "$(params.taskGitRevision)"
@@ -122,10 +121,9 @@ spec:
           )
         else
           requestType=internal-request
-          defaultRequest="hacbs-signing-pipeline"
           EXTRA_ARGS=()
         fi
-        request=$(jq --arg defaultRequest "${defaultRequest}" -r '.sign.request // $defaultRequest' "${DATA_FILE}")
+        request=$(jq -r '.sign.request // "simple-signing-pipeline"' "${DATA_FILE}")
 
         default_pipeline_image="quay.io/redhat-isv/operator-pipelines-images:released"
 

@@ -91,7 +91,6 @@ spec:
                   }
                 },
                 "sign": {
-                  "request": "hacbs-signing-pipeline",
                   "configMapName": "signing-config-map"
                 }
               }
