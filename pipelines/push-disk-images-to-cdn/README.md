@@ -20,6 +20,10 @@ Tekton Pipeline to push disk images to a cdn using pulp
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                         | No       | -               |
 
+## Changes in 1.2.0
+* The `push-disk-images` task now gets the `resultsDir` parameter from `collect-data` results
+* Add the task `update-cr-status` at the end of the pipeline to save all pipeline results
+
 ## Changes in 1.1.0
 * Add new reduce-snapshot task
 

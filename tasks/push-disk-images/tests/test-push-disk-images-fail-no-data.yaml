@@ -19,7 +19,8 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -eux
-              
+
+              mkdir "$(workspaces.data.path)/results"
               cat > "$(workspaces.data.path)/test_snapshot_spec.json" << EOF
               {
                 "application": "disk-images",
@@ -50,6 +51,8 @@ spec:
           value: "data.json"
         - name: pipelineRunUid
           value: $(context.pipelineRun.uid)
+        - name: resultsDirPath
+          value: results
       runAfter:
         - setup
       workspaces:

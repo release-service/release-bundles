@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: push-disk-images-to-cdn
   labels:
-    app.kubernetes.io/version: "1.1.0"
+    app.kubernetes.io/version: "1.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -223,6 +223,8 @@ spec:
             value: $(params.taskGitRevision)
           - name: pathInRepo
             value: tasks/push-disk-images/push-disk-images.yaml
+          - name: resultsDirPath
+            value: "$(tasks.collect-data.results.resultsDir)"
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -235,6 +237,26 @@ spec:
           workspace: release-workspace
       runAfter:
         - check-data-keys
+    - name: update-cr-status
+      params:
+        - name: resource
+          value: $(params.release)
+        - name: resultsDirPath
+          value: $(tasks.collect-data.results.resultsDir)
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/update-cr-status/update-cr-status.yaml
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - push-disk-images
   finally:
     - name: cleanup
       taskRef:

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-disk-images
   labels:
-    app.kubernetes.io/version: "0.2.2"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -22,6 +22,9 @@ spec:
     - name: pipelineRunUid
       type: string
       description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: resultsDirPath
+      description: Path to the results directory in the data workspace
+      type: string
   workspaces:
     - name: data
       description: Workspace where the json files are stored
@@ -36,6 +39,10 @@ spec:
         snapshot=$(jq -c '.' "$(workspaces.data.path)/$(params.snapshotPath)")
         # .cdn.env is likely to change in the future. This is just for POC
         env=$(jq -r '.cdn.env' "$(workspaces.data.path)/$(params.dataPath)")
+
+        RESULTS_FILE="$(workspaces.data.path)/$(params.resultsDirPath)/push-disk-images-results.json"
+        FILES=$(jq -c '{"disk-image-files": [.components[].staged?.files[]?.filename]}' <<< "$snapshot")
+        echo "$FILES" > "$RESULTS_FILE"
 
         # There are three envs supported...production, stage, and qa
         exodusGwSecret=""
