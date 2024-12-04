@@ -223,8 +223,6 @@ spec:
             value: $(params.taskGitRevision)
           - name: pathInRepo
             value: tasks/push-disk-images/push-disk-images.yaml
-          - name: resultsDirPath
-            value: "$(tasks.collect-data.results.resultsDir)"
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -232,6 +230,8 @@ spec:
           value: "$(tasks.collect-data.results.snapshotSpec)"
         - name: pipelineRunUid
           value: $(context.pipelineRun.uid)
+        - name: resultsDirPath
+          value: "$(tasks.collect-data.results.resultsDir)"
       workspaces:
         - name: data
           workspace: release-workspace
