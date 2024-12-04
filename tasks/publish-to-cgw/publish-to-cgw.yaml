@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: publish-to-cgw
   labels:
-    app.kubernetes.io/version: "0.2.5"
+    app.kubernetes.io/version: "0.2.6"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -47,7 +47,7 @@ spec:
             secretKeyRef:
               name: $(params.cgwSecret)
               key: username
-        - name: CGW_TOKEN
+        - name: CGW_PASSWORD
           valueFrom:
             secretKeyRef:
               name: $(params.cgwSecret)
@@ -183,11 +183,11 @@ spec:
             yaml.dump(metadata, file, default_flow_style=False, sort_keys=False)
 
         print(f"YAML content dumped to {METADATA_FILE_PATH}")
+
         command = [
             'push-cgw-metadata',
             '--CGW_hostname', '$(params.cgwHostname)',
             '--CGW_username', '${CGW_USERNAME}',
-            '--CGW_password', '${CGW_TOKEN}',
             '--CGW_filepath', METADATA_FILE_PATH
         ]
 
