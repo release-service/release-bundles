@@ -16,7 +16,7 @@ spec:
       taskRef:
         name: update-component-sbom
       params:
-        - name: dataJsonPath
+        - name: sbomJsonPath
           value: "data.json"
         - name: downloadedSbomPath
           value: downloaded-sboms
@@ -31,7 +31,7 @@ spec:
           - name: data
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:e15023773e138c7d3449f288c8c16de4e3a8d249
+            image: quay.io/konflux-ci/release-service-utils:4a67d0c959e63cbb4bc0d37db1ce962091d6072a
             script: |
               #!/usr/bin/env bash
               set -eux

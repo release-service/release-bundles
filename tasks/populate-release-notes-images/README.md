@@ -1,7 +1,9 @@
 # populate-release-notes-images
 
-Tekton task to populate the releaseNotes.content.images key in the data.json file. It will update the data.json
-in place so that downstream tasks relying on the releaseNotes data can use it.
+Tekton task to populate the releaseNotes.content.images key in the data.json
+file. It will update the data.json in place so that downstream tasks relying on
+the releaseNotes data can use it. Additionally, it outputs a result with the
+path to a file containing data used in component SBOM generation.
 
 ## Parameters
 
@@ -9,6 +11,9 @@ in place so that downstream tasks relying on the releaseNotes data can use it.
 |--------------|----------------------------------------------------------------------|----------|---------------|
 | dataPath     | Path to the JSON string of the merged data to update                 | No       | -             |
 | snapshotPath | Path to the JSON string of the mapped Snapshot in the data workspace | No       | -             |
+
+## Changes in 2.3.0
+* Export additional image data to a file for component SBOM generation
 
 ## Changes in 2.2.3
 * Rename `components` in the CVE struct to `packages`

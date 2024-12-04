@@ -98,10 +98,15 @@ spec:
       runAfter:
         - setup
     - name: check-result
+      params:
+        - name: sbomDataPath
+          value: $(tasks.run-task.results.sbomDataPath)
       workspaces:
         - name: data
           workspace: tests-workspace
       taskSpec:
+        params:
+          - name: sbomDataPath
         workspaces:
           - name: data
         steps:
@@ -120,6 +125,12 @@ spec:
               test $(jq -r '.repository' <<< $image1arch1) == "registry.redhat.io/product/repo"
               test "$(jq -rc '.tags' <<< "$image1arch1")" == '["9.4-1723436855","9.4.0-1723436855","foo","bar"]'
 
+              test "$(jq -r '.images[0].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "true"
+
+              test "$(jq -r '.images[0].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "123456"
+
               echo Checking image1arch2...
               image1arch2=$(jq '.releaseNotes.content.images[1]' "$(workspaces.data.path)/data.json")
               test $(jq -r '.architecture' <<< $image1arch2) == "s390x"
@@ -128,6 +139,12 @@ spec:
                 "pkg:oci/repo@sha256%3Adeadbeef?arch=s390x&repository_url=registry.redhat.io/product&tag=9.4.0-1723436855"
               test $(jq -r '.repository' <<< $image1arch2) == "registry.redhat.io/product/repo"
               test "$(jq -rc '.tags' <<< "$image1arch2")" == '["9.4-1723436855","9.4.0-1723436855","foo","bar"]'
+
+              test "$(jq -r '.images[1].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "false"
+
+              test "$(jq -r '.images[1].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "123456"
 
               echo Checking image2arch1...
               image2arch1=$(jq '.releaseNotes.content.images[2]' "$(workspaces.data.path)/data.json")
@@ -139,6 +156,12 @@ spec:
               test $(jq -r '.repository' <<< $image2arch1) == "registry.stage.redhat.io/product2/repo2"
               test $(jq -rc '.tags' <<< $image2arch1) == '["foo","bar"]'
 
+              test "$(jq -r '.images[2].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "true"
+
+              test "$(jq -r '.images[2].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "abcde"
+
               echo Checking image2arch2...
               image2arch2=$(jq '.releaseNotes.content.images[3]' "$(workspaces.data.path)/data.json")
               test $(jq -r '.architecture' <<< $image2arch2) == "s390x"
@@ -148,5 +171,11 @@ spec:
                 "pkg:oci/repo2@sha256%3Adeadbeef?arch=s390x&repository_url=registry.stage.redhat.io/product2"
               test $(jq -r '.repository' <<< $image2arch2) == "registry.stage.redhat.io/product2/repo2"
               test $(jq -rc '.tags' <<< $image2arch2) == '["foo","bar"]'
+
+              test "$(jq -r '.images[3].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "false"
+
+              test "$(jq -r '.images[3].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "abcde"
       runAfter:
         - run-task

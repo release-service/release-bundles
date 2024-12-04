@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: populate-release-notes-images
   labels:
-    app.kubernetes.io/version: "2.2.3"
+    app.kubernetes.io/version: "2.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -18,6 +18,9 @@ spec:
     - name: snapshotPath
       description: Path to the JSON string of the mapped Snapshot spec in the data workspace
       type: string
+  results:
+    - name: sbomDataPath
+      description: Path to data used in the component SBOM creation in the data workspace
   workspaces:
     - name: data
       description: The workspace where the data JSON file resides
@@ -42,6 +45,12 @@ spec:
 
         UNIQUE_TAG_REGEX="(rhel-)?v?[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]{8,}"
 
+        # Initialize the SBOM data result
+        relativeDir=$(dirname "$(params.dataPath)")
+        sbomDataPath="$(workspaces.data.path)/${relativeDir}/sbom_data.json"
+        echo -n "${relativeDir}/sbom_data.json" > "$(results.sbomDataPath.path)"
+        cp "${DATA_FILE}" "${sbomDataPath}"
+
         NUM_COMPONENTS=$(jq '.components | length' "${SNAPSHOT_FILE}")
         for ((i = 0; i < $NUM_COMPONENTS; i++))
         do
@@ -60,7 +69,7 @@ spec:
             containerImage="${deliveryRepo}@sha256:${sha}"
             # Construct CVE json
             CVEsJson='{"cves":{"fixed":{}}}'
-            CVES=$(jq -c '[.releaseNotes.cves[]? | select(.component=="'$name'")]' ${DATA_FILE})
+            CVES=$(jq -c '[.releaseNotes.cves[]? | select(.component=="'"$name"'")]' "${DATA_FILE}")
             NUM_CVES=$(jq 'length' <<< "$CVES")
             for ((j = 0; j < $NUM_CVES; j++)); do
                 cve=$(jq -c --argjson j "$j" '.[$j]' <<< "$CVES")
@@ -68,13 +77,14 @@ spec:
                     --arg id "$(jq -r '.key' <<< "$cve")" \
                     --argjson packages "$(jq -c '.packages // []' <<< "$cve")" \
                     '{($id): {"packages": $packages}}')
-                CVEsJson=$(jq --argjson cve "$cveJson" '.cves.fixed += $cve' <<< $CVEsJson)
+                CVEsJson=$(jq --argjson cve "$cveJson" '.cves.fixed += $cve' <<< "$CVEsJson")
             done
             # Add one entry per arch (amd64 for example)
             get-image-architectures "${image}" | while IFS= read -r arch_json;
             do
                 arch=$(jq -r .platform.architecture <<< "${arch_json}")
                 digest=$(jq -r .digest <<< "${arch_json}")
+                multiarch=$(jq -r .multiarch <<< "${arch_json}")
                 containerImage="${deliveryRepo}@${digest}"
                 # purl should be pkg:oci/bar@sha256%3Aabcde?arch=amd64&repository_url=registry.redhat.io/foo
                 purl="pkg:oci/${deliveryRepo##*/}@${digest/:/%3A}?arch=${arch}&repository_url=${deliveryRepo%/*}"
@@ -101,14 +111,33 @@ spec:
                     --arg purl "$purl" \
                     --arg repository "$deliveryRepo" \
                     --argjson tags "$tags" \
-                    '{"architecture": $arch, "containerImage":$containerImage,
-                    "purl": $purl, "repository": $repository, "tags": $tags,
-                    "component": $component}')
-                if [ $(jq '.cves.fixed | length' <<< $CVEsJson) -gt 0 ]; then
-                    jsonString=$(jq --argjson cves "$CVEsJson" '. += $cves' <<< $jsonString)
+                    '{"architecture": $arch, "containerImage": $containerImage, "purl": $purl,
+                    "repository": $repository, "tags": $tags, "component": $component}')
+                if [ "$(jq '.cves.fixed | length' <<< "$CVEsJson")" -gt 0 ]; then
+                    jsonString=$(jq --argjson cves "$CVEsJson" '. += $cves' <<< "$jsonString")
                 fi
+
                 # Inject JSON into data.json
-                jq --argjson image "$jsonString" '.releaseNotes.content.images += [$image]' ${DATA_FILE} > \
-                    /tmp/data.tmp && mv /tmp/data.tmp ${DATA_FILE}
+                jq --argjson image "$jsonString" '.releaseNotes.content.images += [$image]' "${DATA_FILE}" > \
+                    /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"
+
+                # Inject SBOM-related data into an SBOM data file
+                sbomJsonString=$(jq -cn \
+                    --arg component "$name" \
+                    --arg arch "$arch" \
+                    --arg containerImage "$containerImage" \
+                    --arg purl "$purl" \
+                    --arg repository "$deliveryRepo" \
+                    --arg multiarch "$multiarch" \
+                    --arg imageSha "$sha" \
+                    --argjson tags "$tags" \
+                    '{"architecture": $arch, "containerImage": $containerImage, "purl": $purl,
+                    "multiarch": $multiarch, "imageSha": $imageSha, "repository": $repository,
+                    "tags": $tags, "component": $component}')
+
+                jq --argjson image "$sbomJsonString" \
+                    '.images = (.images // []) + [$image]' \
+                    "${sbomDataPath}" > \
+                    /tmp/sbomData.tmp && mv /tmp/sbomData.tmp "${sbomDataPath}"
             done
         done

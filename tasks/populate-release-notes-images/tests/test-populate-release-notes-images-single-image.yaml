@@ -86,10 +86,15 @@ spec:
       runAfter:
         - setup
     - name: check-result
+      params:
+        - name: sbomDataPath
+          value: $(tasks.run-task.results.sbomDataPath)
       workspaces:
         - name: data
           workspace: tests-workspace
       taskSpec:
+        params:
+          - name: sbomDataPath
         workspaces:
           - name: data
         steps:
@@ -116,5 +121,12 @@ spec:
               test $(jq -r '.repository' <<< $imagearch2) == "registry.redhat.io/product/repo"
               test $(jq -rc '.tags' <<< $imagearch2) == '["foo","bar"]'
               test "$(jq -rc '.component' <<< "$imagearch2")" == "comp"
+
+              # Test SBOM injection
+              test "$(jq -r '.images[0].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "true"
+
+              test "$(jq -r '.images[0].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "123456"
       runAfter:
         - run-task
