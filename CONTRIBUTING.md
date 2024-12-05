@@ -62,6 +62,26 @@ Overall explanation of what this commit is achieving and the motivation behind i
 
 Signed-off-by: Your Name <your-name@your-email.com>
 ```
+### Pull Request Title Prefixes
+
+The title prefix should be one of (`chore`|`docs`|`feat`|`fix`|`refactor`|`revert`|`style`|`test`) followed by a colon (`:`) and lowercase title. Optionally, you can include a Jira key.
+
+Examples:
+
+- fix(KFLUXSPRT-794): pass content-gateway token
+- feat: add rpms-signature-scan task
+
+Title prefixes:
+
+- **chore**: Changes that do not modify functionality (e.g., version bumps, tool updates, or maintenance tasks).
+- **docs**: Documentation updates or additions (e.g., README changes, inline comments).
+- **feat**: Introduction of a new feature or functionality.
+- **fix**: Bug fixes or corrections to existing functionality.
+- **refactor**: Code changes that improve structure or readability without altering functionality.
+- **revert**: Reverting a previous commit or pull request.
+- **style**: Code formatting or stylistic changes that do not affect functionality (e.g., whitespace, linting).
+- **test**: Adding or updating tests (e.g., unit tests, integration tests).
+
 
 ### Pull Requests
 
