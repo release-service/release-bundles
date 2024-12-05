@@ -40,6 +40,11 @@ spec:
                 ]
               }
               EOF
+
+              cat > "$(workspaces.data.path)/mydata.json" << EOF
+              {
+              }
+              EOF
     - name: run-task
       taskRef:
         name: create-pyxis-image
@@ -52,6 +57,8 @@ spec:
           value: mapped_snapshot.json
         - name: rhPush
           value: "true"
+        - name: dataPath
+          value: mydata.json
       workspaces:
         - name: data
           workspace: tests-workspace

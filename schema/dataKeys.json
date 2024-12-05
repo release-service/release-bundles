@@ -315,6 +315,10 @@
         "skipRepoPublishing": {
           "type": "boolean",
           "description": "Skip setting the pyxis repo to published"
+        },
+        "skipLayers": {
+          "type": "boolean",
+          "description": "When creating ContainerImage in Pyxis, omit details about layers"
         }
       }
     },

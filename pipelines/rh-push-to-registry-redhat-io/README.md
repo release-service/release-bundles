@@ -20,6 +20,9 @@ Tekton pipeline to release content to registry.redhat.io registry.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 4.5.6
+* new mandatory parameter `dataPath` added to `create-pyxis-image` task
+
 ## Changes in 4.5.5
 * new mandatory parameter resultsDirPath added to run-file-updates task
 

@@ -39,6 +39,11 @@ spec:
                 ]
               }
               EOF
+
+              cat > "$(workspaces.data.path)/mydata.json" << EOF
+              {
+              }
+              EOF
     - name: run-task
       taskRef:
         name: create-pyxis-image
@@ -49,6 +54,8 @@ spec:
           value: stage
         - name: snapshotPath
           value: mapped_snapshot.json
+        - name: dataPath
+          value: mydata.json
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -81,7 +88,7 @@ spec:
               fi
 
               if [ "$(wc -l < "$(workspaces.data.path)"/mock_oras.txt)" != 5 ]; then
-                echo Error: oras was expected to be called 4 times. Actual calls:
+                echo Error: oras was expected to be called 5 times. Actual calls:
                 cat "$(workspaces.data.path)/mock_oras.txt"
                 exit 1
               fi

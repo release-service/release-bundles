@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-push-to-registry-redhat-io
   labels:
-    app.kubernetes.io/version: "4.5.5"
+    app.kubernetes.io/version: "4.5.6"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -376,6 +376,8 @@ spec:
           value: "true"
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
+        - name: dataPath
+          value: "$(tasks.collect-data.results.data)"
       workspaces:
         - name: data
           workspace: release-workspace

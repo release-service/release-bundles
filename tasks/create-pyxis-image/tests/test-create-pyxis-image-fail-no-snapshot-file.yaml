@@ -20,6 +20,8 @@ spec:
           value: test-create-pyxis-image-cert
         - name: snapshotPath
           value: missing
+        - name: dataPath
+          value: ""
       workspaces:
         - name: data
           workspace: tests-workspace

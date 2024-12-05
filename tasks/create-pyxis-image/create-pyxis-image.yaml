@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-pyxis-image
   labels:
-    app.kubernetes.io/version: "3.4.4"
+    app.kubernetes.io/version: "3.5.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -40,6 +40,9 @@ spec:
     - name: snapshotPath
       type: string
       description: Path to the JSON string of the mapped Snapshot spec in the data workspace
+    - name: dataPath
+      description: Path to the JSON string of the merged data to use in the data workspace
+      type: string
   workspaces:
     - name: data
       description: The workspace where the snapshot spec and data json files reside
@@ -91,6 +94,12 @@ spec:
             exit 1
         fi
 
+        DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
+        if [ ! -f "${DATA_FILE}" ] ; then
+            echo "No data JSON was provided."
+            exit 1
+        fi
+
         PYXIS_DATA_PATH="$(dirname "$(params.snapshotPath)")/pyxis.json"
         echo -n "${PYXIS_DATA_PATH}" > "$(results.pyxisDataPath.path)"
 
@@ -100,6 +109,9 @@ spec:
         set -x
 
         AUTH_FILE=$(mktemp)
+
+        # Default to false
+        skipLayers="$(jq -r ".pyxis.skipLayers // false" "${DATA_FILE}")"
 
         COMPONENTS=$(jq '.components | length' "${SNAPSHOT_SPEC_FILE}")
         JSON_OUTPUT='{}'
@@ -163,6 +175,16 @@ spec:
                   "${ORAS_ARGS[@]}" \
                   "${PULLSPEC}" \
                       | tee "${MANIFEST_FILE}"
+
+                # When building images without squashing, their final layer might always be bit-wise identical.
+                # This causes upload to pyxis to fail which cannot tolerate duplicate "top_layer_id" values.
+                # This flag allows to overcome this limitation by just deleting the layers so that no layer
+                # information is uploaded.
+                if [ "$skipLayers" = true ]; then
+                  echo ".pyxis.skipLayers is true in data file, so delete the layers"
+                  jq '.layers = []' "${MANIFEST_FILE}" > "${MANIFEST_FILE}.tmp"
+                  mv "${MANIFEST_FILE}.tmp"  "${MANIFEST_FILE}"
+                fi
 
                 # Augment that manifest with further information about the layers, decompressed
                 # This requires pulling the layers to decompress and then measure them

@@ -39,6 +39,11 @@ spec:
                 ]
               }
               EOF
+
+              cat > "$(workspaces.data.path)/mydata.json" << EOF
+              {
+              }
+              EOF
     - name: run-task
       taskRef:
         name: create-pyxis-image
@@ -49,6 +54,8 @@ spec:
           value: stage
         - name: snapshotPath
           value: snapshot.json
+        - name: dataPath
+          value: mydata.json
       workspaces:
         - name: data
           workspace: tests-workspace
