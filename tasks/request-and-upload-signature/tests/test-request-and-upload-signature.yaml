@@ -25,11 +25,11 @@ spec:
           name: sig_key_id
         - value: containerisvsign
           name: sig_key_name
-        - name: ssl_cert_secret_name
-          value: ssl-cert
-        - name: ssl_cert_file_name
+        - name: pyxis_ssl_cert_secret_name
+          value: pyxis-ssl-cert
+        - name: pyxis_ssl_cert_file_name
           value: cert
-        - name: ssl_key_file_name
+        - name: pyxis_ssl_key_file_name
           value: key
         - value: operatorpipelines
           name: umb_client_name
@@ -39,6 +39,12 @@ spec:
           name: umb_publish_topic
         - value: umb.api.redhat.com
           name: umb_url
+        - name: umb_ssl_cert_secret_name
+          value: umb-ssl-cert
+        - name: umb_ssl_cert_file_name
+          value: cert
+        - name: umb_ssl_key_file_name
+          value: key
         - value: https://pyxis.engineering.redhat.com
           name: pyxis_url
         - name: signature_data_file

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: collect-simple-signing-params
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/tags: release
 spec:
@@ -26,12 +26,6 @@ spec:
       description: umb topic which is used for publishing
     - name: umb_client_name
       description: Client name to connect to umb, usually a service account name
-    - name: ssl_cert_secret_name
-      description: SSL secret name
-    - name: ssl_cert_file_name
-      description: SSL certificate file name
-    - name: ssl_key_file_name
-      description: SSL key file name
     - name: pyxis_ssl_cert_secret_name
       description: Pyxis SSL secret name
     - name: pyxis_ssl_cert_file_name
@@ -58,9 +52,6 @@ spec:
         PYXIS_URL=$(jq -er '.data.PYXIS_URL' <<< "${configMapJson}")
         SIG_KEY_ID=$(jq -er '.data.SIG_KEY_ID' <<< "${configMapJson}")
         SIG_KEY_NAME=$(jq -er '.data.SIG_KEY_NAME' <<< "${configMapJson}")
-        SSL_CERT_FILE_NAME=$(jq -er '.data.SSL_CERT_FILE_NAME' <<< "${configMapJson}")
-        SSL_CERT_SECRET_NAME=$(jq -er '.data.SSL_CERT_SECRET_NAME' <<< "${configMapJson}")
-        SSL_KEY_FILE_NAME=$(jq -er '.data.SSL_KEY_FILE_NAME' <<< "${configMapJson}")
         PYXIS_SSL_CERT_FILE_NAME=$(jq -er '.data.PYXIS_SSL_CERT_FILE_NAME' <<< "${configMapJson}")
         PYXIS_SSL_CERT_SECRET_NAME=$(jq -er '.data.PYXIS_SSL_CERT_SECRET_NAME' <<< "${configMapJson}")
         PYXIS_SSL_KEY_FILE_NAME=$(jq -er '.data.PYXIS_SSL_KEY_FILE_NAME' <<< "${configMapJson}")
@@ -75,9 +66,6 @@ spec:
         echo -n "$PYXIS_URL" | tee "$(results.pyxis_url.path)"
         echo -n "$SIG_KEY_ID" | tee "$(results.sig_key_id.path)"
         echo -n "$SIG_KEY_NAME" | tee "$(results.sig_key_name.path)"
-        echo -n "$SSL_CERT_FILE_NAME" | tee "$(results.ssl_cert_file_name.path)"
-        echo -n "$SSL_CERT_SECRET_NAME" | tee "$(results.ssl_cert_secret_name.path)"
-        echo -n "$SSL_KEY_FILE_NAME" | tee "$(results.ssl_key_file_name.path)"
         echo -n "$PYXIS_SSL_CERT_FILE_NAME" | tee "$(results.pyxis_ssl_cert_file_name.path)"
         echo -n "$PYXIS_SSL_CERT_SECRET_NAME" | tee "$(results.pyxis_ssl_cert_secret_name.path)"
         echo -n "$PYXIS_SSL_KEY_FILE_NAME" | tee "$(results.pyxis_ssl_key_file_name.path)"

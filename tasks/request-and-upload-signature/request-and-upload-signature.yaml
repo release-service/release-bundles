@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: request-and-upload-signature
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -37,14 +37,14 @@ spec:
       description: The signing key name that the content is signed with
       name: sig_key_name
       type: string
-    - description: Kubernetes secret name that contains the umb SSL files
-      name: ssl_cert_secret_name
+    - description: Kubernetes secret name that contains the Pyxis SSL files
+      name: pyxis_ssl_cert_secret_name
       type: string
-    - description: The key within the Kubernetes secret that contains the umb SSL cert.
-      name: ssl_cert_file_name
+    - description: The key within the Kubernetes secret that contains the Pyxis SSL cert.
+      name: pyxis_ssl_cert_file_name
       type: string
-    - description: The key within the Kubernetes secret that contains the umb SSL key.
-      name: ssl_key_file_name
+    - description: The key within the Kubernetes secret that contains the Pyxis SSL key.
+      name: pyxis_ssl_key_file_name
       type: string
     - default: operatorpipelines
       description: Client name to connect to umb, usually a service account name
@@ -62,6 +62,15 @@ spec:
       description: umb host to connect to for messaging
       name: umb_url
       type: string
+    - description: Kubernetes secret name that contains the umb SSL files
+      name: umb_ssl_cert_secret_name
+      type: string
+    - description: The key within the Kubernetes secret that contains the umb SSL cert.
+      name: umb_ssl_cert_file_name
+      type: string
+    - description: The key within the Kubernetes secret that contains the umb SSL key.
+      name: umb_ssl_key_file_name
+      type: string
     - default: https://pyxis.engineering.redhat.com
       description: Pyxis instance to upload the signature to.
       name: pyxis_url
@@ -78,13 +87,13 @@ spec:
         - name: UmbCert
           valueFrom:
             secretKeyRef:
-              name: $(params.ssl_cert_secret_name)
-              key: $(params.ssl_cert_file_name)
+              name: $(params.umb_ssl_cert_secret_name)
+              key: $(params.umb_ssl_cert_file_name)
         - name: UmbKey
           valueFrom:
             secretKeyRef:
-              name: $(params.ssl_cert_secret_name)
-              key: $(params.ssl_key_file_name)
+              name: $(params.umb_ssl_cert_secret_name)
+              key: $(params.umb_ssl_key_file_name)
         - name: UMB_CERT_PATH
           value: "/tmp/crt"
         - name: UMB_KEY_PATH
@@ -159,13 +168,13 @@ spec:
         - name: PyxisCert
           valueFrom:
             secretKeyRef:
-              name: $(params.ssl_cert_secret_name)
-              key: $(params.ssl_cert_file_name)
+              name: $(params.pyxis_ssl_cert_secret_name)
+              key: $(params.pyxis_ssl_cert_file_name)
         - name: PyxisKey
           valueFrom:
             secretKeyRef:
-              name: $(params.ssl_cert_secret_name)
-              key: $(params.ssl_key_file_name)
+              name: $(params.pyxis_ssl_cert_secret_name)
+              key: $(params.pyxis_ssl_key_file_name)
         - name: PYXIS_CERT_PATH
           value: "/tmp/pyxisCert"
         - name: PYXIS_KEY_PATH

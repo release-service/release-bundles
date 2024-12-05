@@ -8,6 +8,10 @@ Task to collect parameters for the simple signing pipeline
 |------------------|---------------------------------------------------------------------------------------|----------|--------------------------------------------------------|
 | config_map_name  | Name of a configmap with pipeline configuration                                       | No       | -                                                      |
 
+## Changes in 0.3.0
+* Removed the `ssl_cert_secret_name`, `ssl_cert_file_name`, and `ssl_key_file_name` results
+  * The results added in 0.2.0 take their places
+
 ## Changes in 0.2.0
 * Added the `[pyxis,umb]_ssl_cert_file_name`, `[pyxis,umb]_ssl_cert_secret_name` and `[pyxis,umb]_ssl_key_file_name`
   results
