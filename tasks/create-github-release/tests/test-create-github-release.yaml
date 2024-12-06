@@ -38,7 +38,7 @@ spec:
         - name: githubSecret
           value: test-create-github-release-token
         - name: repository
-          value: foo/bar
+          value: https://github.com/foo/bar
         - name: release_version
           value: 1.2.3
         - name: content_directory

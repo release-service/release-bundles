@@ -5,7 +5,7 @@ metadata:
   name: test-create-github-exist-release
 spec:
   description: |
-    Run the create-github-release task to create an existing release. 
+    Run the create-github-release task to create an existing release.
     It will not be recreated.
   workspaces:
     - name: tests-workspace
@@ -39,7 +39,7 @@ spec:
         - name: githubSecret
           value: test-create-github-release-token
         - name: repository
-          value: foo/repo_with_release
+          value: https://github.com/foo/repo_with_release
         - name: release_version
           value: 1.2.3
         - name: content_directory

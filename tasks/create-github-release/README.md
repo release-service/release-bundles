@@ -15,8 +15,13 @@ a `release` dir.
 | content_directory | The directory inside the workspace to find files for release      | No       | -             |
 | resultsDirPath    | Path to results directory in the data workspace                   | No       | -             |
 
+## Changes in 2.2.1
+* Fix check for existing release
+  * The grep was inadequate, because it would also match for substrings. Now we'll
+    use github api and check the string directly
+
 ## Changes in 2.2.0
-* make task idempotent
+* Make task idempotent
 
 ## Changes in 2.1.1
 * Fixed shellcheck linting issues

@@ -4,14 +4,14 @@ set -eux
 # mocks to be injected into task step scripts
 
 function gh() {
-  echo "Mock gh called with: $*"
+  echo "Mock gh called with: $*" >&2
   echo "$*" >> $(workspaces.data.path)/mock_gh.txt
-  if [[ "$*" == "release list --repo foo/repo_with_release" ]]; then
-    echo "v1.2.3"
+  if [[ "$*" == "api repos/foo/repo_with_release/releases"* ]]; then
+    echo "{"repodata": "lotsofdata"}"
     exit 0
   elif
-    [[ "$*" == "release create v1.2.3 ./foo.zip ./foo.json ./foo_SHA256SUMS ./foo_SHA256SUMS.sig --repo foo/bar --title Release 1.2.3" ]] || \
-    [[ "$*" == "release list --repo foo/bar" ]]; then
+    [[ "$*" == "release create v1.2.3 ./foo.zip ./foo.json ./foo_SHA256SUMS ./foo_SHA256SUMS.sig --repo https://github.com/foo/bar --title Release 1.2.3" ]] || \
+    [[ "$*" == "api repos/foo/bar/releases"* ]]; then
     exit 0
   else
     echo Error: Unexpected call
