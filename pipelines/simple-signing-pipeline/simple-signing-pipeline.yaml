@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: simple-signing-pipeline
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -77,12 +77,12 @@ spec:
           value: $(tasks.collect-simple-signing-params.results.sig_key_id)
         - name: sig_key_name
           value: $(tasks.collect-simple-signing-params.results.sig_key_name)
-        - name: ssl_cert_secret_name
-          value: $(tasks.collect-simple-signing-params.results.ssl_cert_secret_name)
-        - name: ssl_cert_file_name
-          value: $(tasks.collect-simple-signing-params.results.ssl_cert_file_name)
-        - name: ssl_key_file_name
-          value: $(tasks.collect-simple-signing-params.results.ssl_key_file_name)
+        - name: umb_ssl_cert_secret_name
+          value: $(tasks.collect-simple-signing-params.results.umb_ssl_cert_secret_name)
+        - name: umb_ssl_cert_file_name
+          value: $(tasks.collect-simple-signing-params.results.umb_ssl_cert_file_name)
+        - name: umb_ssl_key_file_name
+          value: $(tasks.collect-simple-signing-params.results.umb_ssl_key_file_name)
         - name: umb_client_name
           value: $(tasks.collect-simple-signing-params.results.umb_client_name)
         - name: umb_listen_topic
@@ -91,12 +91,12 @@ spec:
           value: $(tasks.collect-simple-signing-params.results.umb_publish_topic)
         - name: umb_url
           value: $(tasks.collect-simple-signing-params.results.umb_url)
-        - name: pyxis_ssl_secret_name
-          value: $(tasks.collect-simple-signing-params.results.ssl_cert_secret_name)
-        - name: pyxis_ssl_cert_secret_key
-          value: $(tasks.collect-simple-signing-params.results.ssl_cert_file_name)
-        - name: pyxis_ssl_key_secret_key
-          value: $(tasks.collect-simple-signing-params.results.ssl_key_file_name)
+        - name: pyxis_ssl_cert_secret_name
+          value: $(tasks.collect-simple-signing-params.results.pyxis_ssl_cert_secret_name)
+        - name: pyxis_ssl_cert_file_name
+          value: $(tasks.collect-simple-signing-params.results.pyxis_ssl_cert_file_name)
+        - name: pyxis_ssl_key_file_name
+          value: $(tasks.collect-simple-signing-params.results.pyxis_ssl_key_file_name)
         - name: pyxis_url
           value: $(tasks.collect-simple-signing-params.results.pyxis_url)
         - name: taskGitUrl

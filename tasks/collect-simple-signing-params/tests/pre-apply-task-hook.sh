@@ -17,10 +17,16 @@ cat > "/tmp/configMap.json" << EOF
         "SSL_CERT_FILE_NAME": "hacbs-signing-pipeline.pem",
         "SSL_CERT_SECRET_NAME": "hacbs-signing-pipeline-certs",
         "SSL_KEY_FILE_NAME": "hacbs-signing-pipeline.key",
+        "PYXIS_SSL_CERT_FILE_NAME": "hacbs-signing-pipeline.pem",
+        "PYXIS_SSL_CERT_SECRET_NAME": "hacbs-signing-pipeline-certs",
+        "PYXIS_SSL_KEY_FILE_NAME": "hacbs-signing-pipeline.key",
         "UMB_CLIENT_NAME": "hacbs-signing-pipeline-nonprod",
         "UMB_LISTEN_TOPIC": "VirtualTopic.eng.robosignatory.hacbs.sign",
         "UMB_PUBLISH_TOPIC": "VirtualTopic.eng.hacbs-signing-pipeline.hacbs.sign",
-        "UMB_URL": "umb.stage.api.redhat.com"
+        "UMB_URL": "umb.stage.api.redhat.com",
+        "UMB_SSL_CERT_FILE_NAME": "hacbs-signing-pipeline.pem",
+        "UMB_SSL_CERT_SECRET_NAME": "hacbs-signing-pipeline-certs",
+        "UMB_SSL_KEY_FILE_NAME": "hacbs-signing-pipeline.key"
     },
     "kind": "ConfigMap",
     "metadata": {
