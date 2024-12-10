@@ -1,0 +1,72 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: publish-index-image-task
+  labels:
+    app.kubernetes.io/version: "0.1.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+      Task to publish a built FBC index image using skopeo
+  params:
+    - name: sourceIndex
+      type: string
+      description: sourceIndex signing image
+    - name: targetIndex
+      type: string
+      description: targetIndex signing image
+    - name: retries
+      type: string
+      default: "0"
+      description: Number of skopeo retries
+    - name: publishingCredentials
+      type: string
+      default: "fbc-publishing-credentials"
+      description: The credentials used to access the registries
+    - name: requestUpdateTimeout
+      type: string
+      default: "360"
+      description: Max seconds waiting for the status update
+  results:
+    - name: requestMessage
+  steps:
+    - name: publish-index-image
+      env:
+        - name: SOURCE_INDEX_CREDENTIAL
+          valueFrom:
+            secretKeyRef:
+              key: sourceIndexCredential
+              name: $(params.publishingCredentials)
+        - name: TARGET_INDEX_CREDENTIAL
+          valueFrom:
+            secretKeyRef:
+              key: targetIndexCredential
+              name: $(params.publishingCredentials)
+      image: >-
+        quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      script: |
+        #!/usr/bin/env bash
+        PATH=/bin:/usr/bin:/usr/local/bin
+        export PATH
+
+        # do not authenticate if the source is redhat's "registry-proxy" which is unauthenticated.
+        if [[ ! "$(params.sourceIndex)" =~ ^registry-proxy(\-stage)?.engineering.redhat.com ]]; then
+            AUTH_PARAM=("--src-creds" "${SOURCE_INDEX_CREDENTIAL}")
+        fi
+
+        (skopeo copy \
+        --all \
+        --preserve-digests \
+        --retry-times "$(params.retries)" \
+        --src-tls-verify=false "${AUTH_PARAM[@]}" \
+        "docker://$(params.sourceIndex)" \
+        --dest-creds "${TARGET_INDEX_CREDENTIAL}" \
+        "docker://$(params.targetIndex)" && \
+        echo -n "Index Image Published successfully" || \
+        echo -n "Failed publishing Index Image" ) | tee "$(results.requestMessage.path)"
+
+        # trick to get the proper exit status
+        grep "success" "$(results.requestMessage.path)" >/dev/null
