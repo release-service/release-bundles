@@ -1,0 +1,59 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: push-disk-images
+  labels:
+    app.kubernetes.io/version: "0.2.2"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+      Pipeline to push disk images with pulp
+  params:
+    - name: snapshot_json
+      type: string
+      description: String containing a JSON representation of the snapshot spec
+    - name: exodusGwSecret
+      type: string
+      description: Env specific secret containing the Exodus Gateway configs
+    - name: exodusGwEnv
+      type: string
+      description: Environment to use in the Exodus Gateway. Options are [live, pre]
+    - name: pulpSecret
+      type: string
+      description: Env specific secret containing the rhsm-pulp credentials
+    - name: udcacheSecret
+      type: string
+      description: Env specific secret containing the udcache credentials
+    - name: cgwHostname
+      type: string
+      description: The hostname of the content-gateway to publish the metadata to
+      default: https://developers.redhat.com/content-gateway/rest/admin
+    - name: cgwSecret
+      type: string
+      description: Env specific secret containing the content gateway credentials
+  tasks:
+    - name: pulp-push-disk-images
+      timeout: "24h00m0s"
+      taskRef:
+        name: pulp-push-disk-images
+      params:
+        - name: snapshot_json
+          value: $(params.snapshot_json)
+        - name: exodusGwSecret
+          value: $(params.exodusGwSecret)
+        - name: exodusGwEnv
+          value: $(params.exodusGwEnv)
+        - name: pulpSecret
+          value: $(params.pulpSecret)
+        - name: udcacheSecret
+          value: $(params.udcacheSecret)
+        - name: cgwHostname
+          value: $(params.cgwHostname)
+        - name: cgwSecret
+          value: $(params.cgwSecret)
+  results:
+    - name: result
+      value: $(tasks.pulp-push-disk-images.results.result)
