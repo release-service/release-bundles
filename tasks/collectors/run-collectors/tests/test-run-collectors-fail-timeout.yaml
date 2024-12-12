@@ -33,17 +33,19 @@ spec:
                 },
                 "spec": {
                   "application": "app",
-                  "collectors": [
-                    {
-                      "name": "test-collector",
-                      "type": "timeout-collector",
-                      "timeout": 1,
-                      "params": [
-                        {
-                          "name": "test-arg",
-                          "value": "test-value"
-                        }
-                      ]
+                  "collectors":
+                    "items": [
+                      {
+                        "name": "test-collector",
+                        "type": "timeout-collector",
+                        "timeout": 1,
+                        "params": [
+                          {
+                            "name": "test-arg",
+                            "value": "test-value"
+                          }
+                        ]
+                      }
                     }
                   ],
                   "target": "managed"
@@ -59,6 +61,8 @@ spec:
       params:
         - name: collectorsPath
           value: test_release_plan.json
+        - name: collectorsRepository
+          value: test_repo
         - name: collectorsResourceType
           value: releaseplan
         - name: resultsDir
