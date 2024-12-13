@@ -24,8 +24,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/file.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)/file.json" << EOF
               {
                 "jsonBuildInfo": {
                   "arches": [
@@ -93,21 +93,21 @@ spec:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               echo Test the indexImage result was properly set
-              test $(echo $(params.indexImage)) == "redhat.com/rh-stage/iib:01"
+              test "$(params.indexImage)" == "redhat.com/rh-stage/iib:01"
 
               echo Test the indexImageResolved result was properly set
-              test $(echo $(params.indexImageResolved)) == "redhat.com/rh-stage/iib@sha256:abcdefghijk"
+              test "$(params.indexImageResolved)" == "redhat.com/rh-stage/iib@sha256:abcdefghijk"
 
               echo Check the results file
-              test $(jq -r '.index_image.index_image' \
-                $(workspaces.data.path)/results/extract-index-image-results.json) == \
+              test "$(jq -r '.index_image.index_image' \
+                "$(workspaces.data.path)/results/extract-index-image-results.json")" == \
                 "redhat.com/rh-stage/iib:01"
-              test $(jq -r '.index_image.index_image_resolved' \
-                $(workspaces.data.path)/results/extract-index-image-results.json) == \
+              test "$(jq -r '.index_image.index_image_resolved' \
+                "$(workspaces.data.path)/results/extract-index-image-results.json")" == \
                 "redhat.com/rh-stage/iib@sha256:abcdefghijk"
       runAfter:
         - run-task
