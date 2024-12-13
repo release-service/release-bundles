@@ -35,6 +35,9 @@ shouldn't cause any problems, because RHEC will ignore repos with no published i
 | dataPath       | Path to the JSON string of the merged data to use in the data workspace                              | No       |                 |
 | resultsDirPath | Path to the results directory in the data workspace                                                  | No       |                 |
 
+## Changes in 3.0.1
+* Fix shellcheck/checkton linting issues in the task and tests
+
 ## Changes in 3.0.0
 * data json is now mandatory - technically, for some use cases the file is not needed, but requiring it always
   makes it consistent with other tasks and it also makes the task script more readable

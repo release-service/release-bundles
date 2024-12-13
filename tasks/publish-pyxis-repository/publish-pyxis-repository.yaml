@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: publish-pyxis-repository
   labels:
-    app.kubernetes.io/version: "3.0.0"
+    app.kubernetes.io/version: "3.0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -52,12 +52,12 @@ spec:
     - name: publish-pyxis-repository
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       env:
-        - name: pyxisCert
+        - name: PYXIS_CERT
           valueFrom:
             secretKeyRef:
               name: $(params.pyxisSecret)
               key: cert
-        - name: pyxisKey
+        - name: PYXIS_KEY
           valueFrom:
             secretKeyRef:
               name: $(params.pyxisSecret)
@@ -87,8 +87,8 @@ spec:
 
         # Disable trace logging to avoid leaking of cert+key
         set +x
-        echo "${pyxisCert}" > /tmp/crt
-        echo "${pyxisKey}" > /tmp/key
+        echo "${PYXIS_CERT}" > /tmp/crt
+        echo "${PYXIS_KEY}" > /tmp/key
         set -x
 
         SNAPSHOT_SPEC_FILE="$(workspaces.data.path)/$(params.snapshotPath)"
@@ -115,29 +115,29 @@ spec:
         # Default to false
         skipRepoPublishing="$(jq -r ".pyxis.skipRepoPublishing // false" "${DATA_FILE}")"
 
-        defaultPushSourceContainer=$(jq -r '.mapping.defaults.pushSourceContainer' ${DATA_FILE} || echo false)
+        defaultPushSourceContainer=$(jq -r '.mapping.defaults.pushSourceContainer' "${DATA_FILE}" || echo false)
 
         application=$(jq -r '.application' "${SNAPSHOT_SPEC_FILE}")
         printf 'Beginning "%s" for "%s"\n\n' "$(context.task.name)" "$application"
 
         NUM_COMPONENTS=$(jq '.components | length' "${SNAPSHOT_SPEC_FILE}")
-        for ((i = 0; i < $NUM_COMPONENTS; i++))
+        for ((i = 0; i < NUM_COMPONENTS; i++))
         do
             COMPONENT=$(jq -c --argjson i "$i" '.components[$i]' "${SNAPSHOT_SPEC_FILE}")
             PAYLOAD='{"published":true}'
             COMPONENT_NAME=$(jq -r '.name' <<< "$COMPONENT")
-            REPOSITORY=$(jq -r '.repository' <<< $COMPONENT)
+            REPOSITORY=$(jq -r '.repository' <<< "$COMPONENT")
             PYXIS_REPOSITORY=${REPOSITORY##*/}
             # Replace "----" with "/"
             PYXIS_REPOSITORY=${PYXIS_REPOSITORY//----//}
             PYXIS_REPOSITORY_JSON=$(curl --retry 5 --key /tmp/key --cert /tmp/crt \
                 "${PYXIS_URL}/v1/repositories/registry/${PYXIS_REGISTRY}/repository/${PYXIS_REPOSITORY}" -X GET)
 
-            PYXIS_REPOSITORY_ID=$(jq -r '._id // ""' <<< $PYXIS_REPOSITORY_JSON)
+            PYXIS_REPOSITORY_ID=$(jq -r '._id // ""' <<< "$PYXIS_REPOSITORY_JSON")
             if [ -z "$PYXIS_REPOSITORY_ID" ]; then
                 echo Error: Unable to get Container Repository object id from Pyxis
                 echo "Pyxis response for ${PYXIS_REGISTRY}/${PYXIS_REPOSITORY}:"
-                echo $PYXIS_REPOSITORY_JSON
+                echo "$PYXIS_REPOSITORY_JSON"
                 exit 1
             fi
 
@@ -154,15 +154,15 @@ spec:
 
             # Set source_container_image_enabled based on pushSourceContainer value in components or use default if
             # it is not set in the component
-            if [[ $(jq -r '.pushSourceContainer' <<< $COMPONENT) == "true" ]] ||
-              [[ $(jq 'has("pushSourceContainer")' <<< $COMPONENT) == "false" && \
+            if [[ $(jq -r '.pushSourceContainer' <<< "$COMPONENT") == "true" ]] ||
+              [[ $(jq 'has("pushSourceContainer")' <<< "$COMPONENT") == "false" && \
               ${defaultPushSourceContainer} == "true" ]] ; then
-                PAYLOAD=$(jq -c '. += {"source_container_image_enabled":true}' <<< $PAYLOAD)
+                PAYLOAD=$(jq -c '. += {"source_container_image_enabled":true}' <<< "$PAYLOAD")
             fi
 
             # verify that publish_on_push is set to true.
             # otherwise, do not publish the image.
-            PYXIS_REPOSITORY_PUBLISH_ON_PUSH=$(jq -r '.publish_on_push // "false"' <<< $PYXIS_REPOSITORY_JSON)
+            PYXIS_REPOSITORY_PUBLISH_ON_PUSH=$(jq -r '.publish_on_push // "false"' <<< "$PYXIS_REPOSITORY_JSON")
             if [ "${PYXIS_REPOSITORY_PUBLISH_ON_PUSH}" != "true" ] ; then
               echo "WARNING: repository ${PYXIS_REGISTRY}/${PYXIS_REPOSITORY} is marked as publish_on_push = false"
               echo "Skipping the setting of the published flag."
