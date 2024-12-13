@@ -48,7 +48,7 @@ spec:
                 echo "$binary content" > "$CONTENT_DIR/$binary"
               done
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)/data.json" << EOF
               {
                 "contentGateway": {
                   "mirrorOpenshiftPush": true,
