@@ -23,7 +23,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)/data.json" << EOF
               {
                 "cdn": {
                   "env": "qa"
@@ -57,17 +57,10 @@ spec:
         steps:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
-            env:
-              - name: "exodusGwSecret"
-                value: '$(params.exodusGwSecret)'
-              - name: "exodusGwUrl"
-                value: '$(params.exodusGwUrl)'
-              - name: "exodusGwEnv"
-                value: '$(params.exodusGwEnv)'
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
-              test $exodusGwSecret == "exodus-stage-secret"
-              test $exodusGwUrl == "https://exodus-gw.corp.stage.redhat.com"
-              test $exodusGwEnv == "live"
+              test "$(params.exodusGwSecret)" == "exodus-stage-secret"
+              test "$(params.exodusGwUrl)" == "https://exodus-gw.corp.stage.redhat.com"
+              test "$(params.exodusGwEnv)" == "live"
