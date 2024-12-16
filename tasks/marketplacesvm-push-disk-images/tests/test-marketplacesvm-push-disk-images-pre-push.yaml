@@ -2,10 +2,10 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-marketplacesvm-push-disk-images
+  name: test-marketplacesvm-push-disk-images-pre-push
 spec:
   description: |
-    Run the marketplacesvm-push-disk-images task with valid data to ensure it succeeds
+    Run the marketplacesvm-push-disk-images task in pre-push mode and ensure it succeeds
   workspaces:
     - name: tests-workspace
   tasks:
@@ -84,40 +84,6 @@ spec:
               }
               EOF
 
-              cat > "$(workspaces.data.path)/starmap.json" << EOF
-              [
-                {
-                  "cloud": "aws",
-                  "mappings": {
-                    "aws-emea": {
-                      "destinations": [
-                        {
-                          "architecture": "x86_64",
-                          "destination": "00000000-0000-0000-0000-000000000000",
-                          "overwrite": false,
-                          "restrict_version": true
-                        }
-                      ],
-                      "provider": null
-                    },
-                    "aws-na": {
-                      "destinations": [
-                        {
-                          "architecture": "x86_64",
-                          "destination": "ffffffff-ffff-ffff-ffff-ffffffffffff",
-                          "overwrite": false,
-                          "restrict_version": true
-                        }
-                      ],
-                      "provider": null
-                    }
-                  },
-                  "name": "test-product",
-                  "workflow": "stratosphere"
-                }
-              ]
-              EOF
-
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -130,6 +96,8 @@ spec:
           value: "snapshot_spec.json"
         - name: cloudMarketplacesSecret
           value: marketplacesvm-test-secret
+        - name: prePush
+          value: true
       runAfter:
         - setup
       workspaces:
@@ -151,16 +119,6 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -eux
-
-              STARMAP_EXPECTED_DATA=$(jq -c '.' "$(workspaces.data.path)/starmap.json")
-              TASK_STARMAP_DATA=$(yq -p yaml -o json < "$(workspaces.data.path)/starmap.yaml")
-              TASK_STARMAP_DATA=$(jq -c '.' <<< "$TASK_STARMAP_DATA")
-              if [[ "$TASK_STARMAP_DATA" != "$STARMAP_EXPECTED_DATA" ]]; then
-                echo "Execution failed: Mismatch on expected StArMap data."
-                echo "Got: $TASK_STARMAP_DATA"
-                echo "Expected: $STARMAP_EXPECTED_DATA"
-                exit 1
-              fi
 
               # Single component fixture: Expected "prepare_component" to be called once
               expected_pullspec="quay.io/workload/tenant/test-product/amd-bootc-1-3-raw-disk-image@sha256:123456"
@@ -187,8 +145,8 @@ spec:
                   echo "Error: wrapper was expected to be called a 1 time. Actual calls:"
                   cat "$(workspaces.data.path)/mock_wrapper.txt"
                   exit 1
-              elif [[ $(<"$(workspaces.data.path)/mock_wrapper.txt") == *"--nochannel"* ]]; then
-                  echo "Error: wrapper was expected to be called without '--nochannel'. Actual call:"
+              elif [[ $(<"$(workspaces.data.path)/mock_wrapper.txt") != *"--nochannel"* ]]; then
+                  echo "Error: wrapper was expected to be called with '--nochannel'. Actual call:"
                   cat "$(workspaces.data.path)/mock_wrapper.txt"
                   exit 1
               fi

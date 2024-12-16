@@ -1,0 +1,78 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-collect-marketplacesvm-params
+spec:
+  description: |
+    Run the collect-marketplacesvm-params task with the secret required and verify that
+    it will return the secret string.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:6556e8a6b031c1aad4f0472703fd121a6e1cd45d
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              cat > $(workspaces.data.path)/data.json << EOF
+              {
+                "mapping": {
+                  "components": [
+                    {
+                      "name": "mycomponent1"
+                    },
+                    {
+                      "name": "mycomponent2",
+                      "public": true
+                    }
+                  ],
+                  "defaults": {},
+                  "cloudMarketplacesSecret": "eyJ0ZXN0Ijoic2VjcmV0In0K"
+                }
+              }
+              EOF
+    - name: run-task
+      taskRef:
+        name: collect-marketplacesvm-params
+      params:
+        - name: dataPath
+          value: data.json
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+    - name: check-result
+      params:
+        - name: secret
+          value: $(tasks.run-task.results.cloudMarketplacesSecret)
+        - name: prePush
+          value: $(tasks.run-task.results.prePush)
+      taskSpec:
+        params:
+          - name: secret
+          - name: prePush
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:6556e8a6b031c1aad4f0472703fd121a6e1cd45d
+            env:
+              - name: "SECRET"
+                value: '$(params.secret)'
+              - name: "PREPUSH"
+                value: '$(params.prePush)'
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              test "$SECRET" = "eyJ0ZXN0Ijoic2VjcmV0In0K"
+              test "$PREPUSH" = "false"

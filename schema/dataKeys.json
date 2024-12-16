@@ -524,6 +524,10 @@
         "cloudMarketplacesSecret": {
           "type": "string",
           "description": "Secret for cloud marketplaces"
+        },
+        "cloudMarketplacesPrePush": {
+          "type": "boolean",
+          "description": "Whether perform a pre-push (true) or not (false). When true it will not publish PROD."
         }
       }
     },

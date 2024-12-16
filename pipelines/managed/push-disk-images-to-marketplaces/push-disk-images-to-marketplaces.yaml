@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: push-disk-images-to-marketplaces
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -187,7 +187,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - apply-mapping
-    - name: collect-marketplacesvm-secret
+    - name: collect-marketplacesvm-params
       taskRef:
         resolver: "git"
         params:
@@ -196,7 +196,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-marketplacesvm-secret/collect-marketplacesvm-secret.yaml
+            value: tasks/collect-marketplacesvm-params/collect-marketplacesvm-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -205,7 +205,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - verify-enterprise-contract
-    - name: push-disk-images-marketplaces
+    - name: marketplacesvm-push-disk-images
       timeout: "12h00m0s"
       when:
         - input: "$(tasks.apply-mapping.results.mapped)"
@@ -226,12 +226,14 @@ spec:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
         - name: cloudMarketplacesSecret
-          value: "$(tasks.collect-marketplacesvm-secret.results.cloudMarketplacesSecret)"
+          value: "$(tasks.collect-marketplacesvm-params.results.cloudMarketplacesSecret)"
+        - name: prePush
+          value: "$(tasks.collect-marketplacesvm-params.results.prePush)"
       workspaces:
         - name: data
           workspace: release-workspace
       runAfter:
-        - collect-marketplacesvm-secret
+        - collect-marketplacesvm-params
   finally:
     - name: cleanup
       taskRef:

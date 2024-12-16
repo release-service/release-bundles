@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: marketplacesvm-push-disk-images
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -20,6 +20,10 @@ spec:
     - name: cloudMarketplacesSecret
       type: string
       description: Env specific secret containing the marketplaces credentials.
+    - name: prePush
+      type: string
+      description: Whether perform a pre-push (true) or not (false). When true it will not publish PROD.
+      default: false
     - name: concurrentLimit
       type: string
       description: The maximum number of images to be pulled at once.
@@ -140,4 +144,9 @@ spec:
         pushsource-ls "staged:${BASE_DIR}"
 
         # Process the push
-        marketplacesvm_push_wrapper --debug --source "${BASE_DIR}" --starmap-file "$STARMAP_MAPPING_FILE"
+        EXTRA_ARGS=()
+        if [[ "$(params.prePush)" == "true" ]]; then
+             EXTRA_ARGS+=("--nochannel")
+        fi
+        marketplacesvm_push_wrapper --debug "${EXTRA_ARGS[@]}" \
+            --source "${BASE_DIR}" --starmap-file "$STARMAP_MAPPING_FILE"
