@@ -20,12 +20,12 @@ spec:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
-              mkdir -p $(workspaces.data.path)/binaries
-              echo "Konflux" > $(workspaces.data.path)/binaries/sample.txt
-              echo "Konflux 1" > $(workspaces.data.path)/binaries/sample-1.txt
+              mkdir -p "$(workspaces.data.path)/binaries"
+              echo "Konflux" > "$(workspaces.data.path)/binaries/sample.txt"
+              echo "Konflux 1" > "$(workspaces.data.path)/binaries/sample-1.txt"
     - name: run-task
       taskRef:
         name: push-to-cdn
@@ -59,21 +59,21 @@ spec:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             env:
-              - name: "srcDestPaths"
+              - name: "SRCDESTPATHS"
                 value: '$(params.srcDestPaths)'
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -x
 
               PREFIX="exodus:/content/origin/files/sha256"
               destination_paths=()
-              for file in $(workspaces.data.path)/binaries/*; do
+              for file in "$(workspaces.data.path)"/binaries/*; do
                 checksum=$(sha256sum "$file" | awk '{print $1}')
                 path="$PREFIX/${checksum:0:2}/$checksum/$(basename "$file")"
                 destination_paths+=("$path")
               done
 
-              values=($(cat "$srcDestPaths" | jq -r '.[]'))
+              mapfile -t values < <(jq -r '.[]' "$SRCDESTPATHS")
               for path in "${destination_paths[@]}"; do
                 if printf '%s\n' "${values[@]}" | grep -q -x "$path"; then
                   echo "Match found: $path"

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-to-cdn
   labels:
-    app.kubernetes.io/version: "0.2.1"
+    app.kubernetes.io/version: "0.2.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -40,12 +40,12 @@ spec:
     - name: execute-exodus-rsync
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       env:
-        - name: exodusGwCert
+        - name: EXODUS_GW_CERT
           valueFrom:
             secretKeyRef:
               name: $(params.exodusGwSecret)
               key: cert
-        - name: exodusGwKey
+        - name: EXODUS_GW_KEY
           valueFrom:
             secretKeyRef:
               name: $(params.exodusGwSecret)
@@ -67,8 +67,8 @@ spec:
           mkdir -p "$WORKSPACE_DIR"
 
           { set +x; } 2>/dev/null
-          echo "$exodusGwCert" > "$EXODUS_CERT_PATH"
-          echo "$exodusGwKey" > "$EXODUS_KEY_PATH"
+          echo "$EXODUS_GW_CERT" > "$EXODUS_CERT_PATH"
+          echo "$EXODUS_GW_KEY" > "$EXODUS_KEY_PATH"
 
           cat << EOF > "$EXODUS_CONF_PATH"
         gwcert: $EXODUS_CERT_PATH

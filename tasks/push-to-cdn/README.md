@@ -14,6 +14,9 @@ Tekton task to push content to Red Hat's CDN
 | binariesDir  | The directory inside the workspace where the binaries are stored     | Yes      | "binaries"    |
 | subdirectory | Subdirectory inside the workspace to be used for storing the results | Yes      | ""            |
 
+## Changes in 0.2.2
+* Fix shellcheck/checkton linting issues in the task and tests
+
 ## Changes in 0.2.1
 * remove src (-s) and dest (-d) options for rsync
 
