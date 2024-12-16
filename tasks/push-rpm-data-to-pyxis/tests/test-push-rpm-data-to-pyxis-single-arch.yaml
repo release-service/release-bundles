@@ -21,7 +21,7 @@ spec:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:34016ab5a3904257c198a12d1829b0093214b6ee
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               cat > "$(workspaces.data.path)/pyxis_data.json" << EOF
@@ -85,7 +85,7 @@ spec:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:34016ab5a3904257c198a12d1829b0093214b6ee
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               if [ "$(wc -l < "$(workspaces.data.path)/mock_cosign.txt")" != 2 ]; then

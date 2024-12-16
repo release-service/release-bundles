@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-rpm-data-to-pyxis
   labels:
-    app.kubernetes.io/version: "1.3.2"
+    app.kubernetes.io/version: "1.3.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -61,14 +61,14 @@ spec:
         DOCKER_CONFIG="$(mktemp -d)"
         export DOCKER_CONFIG
 
-        for (( i=0; i < $NUM_COMPONENTS; i++ )); do
+        for (( i=0; i < NUM_COMPONENTS; i++ )); do
           COMPONENT=$(jq -c --argjson i "$i" '.components[$i]' "${PYXIS_FILE}")
           IMAGEURL=$(jq -r '.containerImage' <<< "${COMPONENT}")
           NUM_PYXIS_IMAGES=$(jq '.pyxisImages | length' <<< "${COMPONENT}")
           # cosign has very limited support for selecting the right auth entry,
           # so create a custom auth file with just one entry
           select-oci-auth "$IMAGEURL" > "$DOCKER_CONFIG"/config.json
-          for (( j=0; j < $NUM_PYXIS_IMAGES; j++ )); do
+          for (( j=0; j < NUM_PYXIS_IMAGES; j++ )); do
             PYXIS_IMAGE=$(jq -c --argjson j "$j" '.pyxisImages[$j]' <<< "${COMPONENT}")
             FILE="$(jq -r '.imageId' <<< "$PYXIS_IMAGE").json"
             DIGEST="$(jq -r '.digest' <<< "$PYXIS_IMAGE")"
@@ -88,9 +88,10 @@ spec:
           done
         done
 
-        SBOM_COUNT=$(ls *.json | wc -l )
+        sbom_files=(*.json)
+        SBOM_COUNT=${#sbom_files[@]}
         PYXIS_IMAGES=$(jq '[.components[].pyxisImages | length] | add' "${PYXIS_FILE}")
-        if [ $SBOM_COUNT != $PYXIS_IMAGES ]; then
+        if [ "$SBOM_COUNT" != "$PYXIS_IMAGES" ]; then
           echo "ERROR: Expected to fetch sbom for $PYXIS_IMAGES images, but only $SBOM_COUNT were saved"
           exit 1
         fi
@@ -101,18 +102,18 @@ spec:
       image:
         quay.io/konflux-ci/release-service-utils:34016ab5a3904257c198a12d1829b0093214b6ee
       env:
-        - name: pyxisCert
+        - name: PYXIS_CERT
           valueFrom:
             secretKeyRef:
               name: $(params.pyxisSecret)
               key: cert
-        - name: pyxisKey
+        - name: PYXIS_KEY
           valueFrom:
             secretKeyRef:
               name: $(params.pyxisSecret)
               key: key
       script: |
-        #!/usr/bin/env sh
+        #!/usr/bin/env bash
         set -eu
 
         if [[ "$(params.server)" == "production" ]]
@@ -134,25 +135,23 @@ spec:
 
         export PYXIS_CERT_PATH=/tmp/crt
         export PYXIS_KEY_PATH=/tmp/key
-        echo "${pyxisCert}" > $PYXIS_CERT_PATH
-        echo "${pyxisKey}" > $PYXIS_KEY_PATH
-
-        PYXIS_FILE="$(workspaces.data.path)/$(params.pyxisJsonPath)"
+        echo "${PYXIS_CERT}" > $PYXIS_CERT_PATH
+        echo "${PYXIS_KEY}" > $PYXIS_KEY_PATH
 
         SBOM_PATH="$(dirname "$(params.pyxisJsonPath)")/downloaded-sboms"
         cd "$(workspaces.data.path)/${SBOM_PATH}"
 
         N=$(params.concurrentLimit)  # The maximum number of images to be processed at once
         declare -a jobs=()
-        declare -a files=()
-        total=$(ls *.json | wc -l )
+        json_files=(*.json)
+        total=${#json_files[@]}
         count=0
         success=true
         echo "Starting RPM data upload for $total files in total. " \
           "Up to $N files will be uploaded at once..."
 
         for FILE in *.json; do
-          IMAGEID=$(echo $FILE | cut -d '.' -f 1)
+          IMAGEID=$(echo "$FILE" | cut -d '.' -f 1)
 
           # Extract the format information using jq
           UPLOAD_SCRIPT=$(
@@ -176,13 +175,13 @@ spec:
           $UPLOAD_SCRIPT --retry --image-id "$IMAGEID" --sbom-path "$FILE" --verbose > "${IMAGEID}.out" 2>&1 &
 
           jobs+=($!)  # Save the background process ID
-          images+=($IMAGEID)
+          images+=("$IMAGEID")
           ((++count))
 
-          if [ $((count%N)) -eq 0 -o $((count)) -eq $total ]; then
+          if [ $((count%N)) -eq 0 ] || [ $((count)) -eq "$total" ]; then
             echo Waiting for the current batch of background processes to finish
             for job_id in "${!jobs[@]}"; do
-              if ! wait ${jobs[job_id]}; then
+              if ! wait "${jobs[job_id]}"; then
                 echo "Error: upload of rpm data failed for one of the images"
                 success=false
               fi
@@ -190,7 +189,7 @@ spec:
 
             echo
             echo Printing outputs for current upload_rpm_data script runs
-            for img in ${images[@]}; do
+            for img in "${images[@]}"; do
               echo "=== $img ==="
               cat "${img}.out"
               echo

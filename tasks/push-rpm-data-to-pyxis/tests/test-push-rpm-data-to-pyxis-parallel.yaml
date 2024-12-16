@@ -21,7 +21,7 @@ spec:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:34016ab5a3904257c198a12d1829b0093214b6ee
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               cat > "$(workspaces.data.path)/pyxis.json" << EOF
@@ -118,7 +118,7 @@ spec:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:34016ab5a3904257c198a12d1829b0093214b6ee
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               if [ "$(wc -l < "$(workspaces.data.path)/mock_cosign.txt")" != 5 ]; then
@@ -134,13 +134,13 @@ spec:
               fi
 
               # Check that multiple instances of upload_rpm_data were running in parallel - up to 4 at once
-              if ! cat $(workspaces.data.path)/myImageID[1234]Parallel.count | grep 4; then
+              if ! grep 4 "$(workspaces.data.path)"/myImageID[1234]Parallel.count; then
                 echo Error: Expected to see 4 parallel runs of upload_rpm_data at some point.
                 echo Actual counts:
-                cat $(workspaces.data.path)/myImageID[1234]Parallel.count
+                cat "$(workspaces.data.path)"/myImageID[1234]Parallel.count
                 exit 1
               fi
               # The last instance of upload_rpm_data was in a new batch - it ran alone
-              test $(wc -l < $(workspaces.data.path)/myImageID5Parallel.count) -eq 1
+              test "$(wc -l < "$(workspaces.data.path)/myImageID5Parallel.count")" -eq 1
       runAfter:
         - run-task

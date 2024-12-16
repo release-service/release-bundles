@@ -13,6 +13,9 @@ all repository_id strings found in rpm purl strings in the sboms.
 | server          | The server type to use. Options are 'production','production-internal,'stage-internal' and 'stage'. | Yes      | production    |
 | concurrentLimit | The maximum number of images to be processed at once                                                | Yes      | 4             |
 
+## Changes in 1.3.3
+* Fix shellcheck/checkton linting issues in the task and tests
+
 ## Changes in 1.3.2
 * Updated the base image used in this task
   * The new image avoids failing on invalid purl strings
