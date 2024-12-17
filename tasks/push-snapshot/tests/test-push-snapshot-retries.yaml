@@ -23,8 +23,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)"/snapshot.json << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -40,7 +40,7 @@ spec:
               }
               EOF
 
-              echo '{}' > $(workspaces.data.path)/mydata.json
+              echo '{}' > "$(workspaces.data.path)"/mydata.json
     - name: run-task
       taskRef:
         name: push-snapshot
@@ -72,21 +72,21 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              if [ $(cat $(workspaces.data.path)/mock_cosign.txt | wc -l) != 4 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_cosign.txt")" != 4 ]; then
                 echo Error: cosign was expected to be called 4 times. Actual calls:
-                cat $(workspaces.data.path)/mock_cosign.txt
+                cat "$(workspaces.data.path)/mock_cosign.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_skopeo.txt | wc -l) != 1 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_skopeo.txt")" != 1 ]; then
                 echo Error: skopeo was expected to be called 1 time. Actual calls:
-                cat $(workspaces.data.path)/mock_skopeo.txt
+                cat "$(workspaces.data.path)/mock_skopeo.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_oras.txt | wc -l) != 2 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_oras.txt")" != 2 ]; then
                 echo Error: oras was expected to be called 2 times. Actual calls:
-                cat $(workspaces.data.path)/mock_oras.txt
+                cat "$(workspaces.data.path)/mock_oras.txt"
                 exit 1
               fi
       runAfter:

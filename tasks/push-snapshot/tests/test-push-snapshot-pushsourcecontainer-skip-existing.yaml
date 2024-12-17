@@ -24,8 +24,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)"/snapshot.json << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -41,7 +41,7 @@ spec:
               }
               EOF
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)"/data.json << EOF
               {
                 "mapping": {
                   "defaults": {
@@ -81,21 +81,21 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              if [ -f $(workspaces.data.path)/mock_cosign.txt ]; then
+              if [ -f "$(workspaces.data.path)"/mock_cosign.txt ]; then
                 echo Error: cosign was not expected to be called. Actual calls:
-                cat $(workspaces.data.path)/mock_cosign.txt
+                cat "$(workspaces.data.path)/mock_cosign.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_skopeo.txt | wc -l) != 1 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_skopeo.txt")" != 1 ]; then
                 echo Error: skopeo was expected to be called 1 time. Actual calls:
-                cat $(workspaces.data.path)/mock_skopeo.txt
+                cat "$(workspaces.data.path)/mock_skopeo.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_oras.txt | wc -l) != 5 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_oras.txt")" != 5 ]; then
                 echo Error: oras was expected to be called 5 times. Actual calls:
-                cat $(workspaces.data.path)/mock_oras.txt
+                cat "$(workspaces.data.path)/mock_oras.txt"
                 exit 1
               fi
       runAfter:

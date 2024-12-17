@@ -26,8 +26,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/mapped_snapshot.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)/mapped_snapshot.json" << EOF
               {
                 "application": "myapp",
                 "components": [

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-snapshot
   labels:
-    app.kubernetes.io/version: "6.4.1"
+    app.kubernetes.io/version: "6.4.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -43,7 +43,7 @@ spec:
         #!/usr/bin/env bash
         set -eux
 
-        push_image () { # Expected arguments are [origin_digest, name, containerImage, repository, tag, arch, oras_args]
+        push_image () { # Expected arguments are [origin_digest, name, containerImage, repository, tag, platform]
           # note: Inspection might fail on empty repos, hence `|| true`
 
           # oras has very limited support for selecting the right auth entry,
@@ -53,8 +53,12 @@ spec:
           select-oci-auth "$4" | jq -c \
             '.auths."'"$4"'" = .auths."'"$registry"'" | del(.auths."'"$registry"'")' > "$DEST_AUTH_FILE"
 
-          # We need this default value for $7 when oras_args is equal to ()
-          destination_digest=$(oras resolve --registry-config "$DEST_AUTH_FILE" ${7:-} "$4:$5" || true)
+          oras_args=()
+          if [ -n "$6" ]; then
+            oras_args=(--platform "$6")
+          fi
+
+          destination_digest=$(oras resolve --registry-config "$DEST_AUTH_FILE" "${oras_args[@]}" "$4:$5" || true)
 
           if [[ "$destination_digest" != "$1" || -z "$destination_digest" ]]; then
             printf '* Pushing component: %s to %s:%s\n' "$2" "$4" "$5"
@@ -96,28 +100,28 @@ spec:
             exit 1
         fi
 
-        if [ $(jq '.components | map(select((has("tags")|not) or (.tags | IN([])))) | length' \
-          "${SNAPSHOT_SPEC_FILE}") -ne 0 ] ; then
+        if [ "$(jq '.components | map(select((has("tags")|not) or (.tags | IN([])))) | length' \
+          "${SNAPSHOT_SPEC_FILE}")" -ne 0 ] ; then
             echo "Found components in the snapshot file that do not contain tags. Failing"
             cat "${SNAPSHOT_SPEC_FILE}"
             exit 1
         fi
 
         RESULTS_FILE="$(workspaces.data.path)/$(params.resultsDirPath)/push-snapshot-results.json"
-        RESULTS_JSON='{"images":[]}'
+        RESULTS_JSON="{\"images\":[]}"
         SOURCE_AUTH_FILE=$(mktemp)
 
-        defaultPushSourceContainer=$(jq -r '.mapping.defaults.pushSourceContainer' $DATA_FILE)
+        defaultPushSourceContainer=$(jq -r '.mapping.defaults.pushSourceContainer' "$DATA_FILE")
 
         application=$(jq -r '.application' "${SNAPSHOT_SPEC_FILE}")
         NUM_COMPONENTS=$(jq '.components | length' "${SNAPSHOT_SPEC_FILE}")
         printf 'Beginning "%s" for "%s"\n\n' "$(context.task.name)" "$application"
-        for ((i = 0; i < $NUM_COMPONENTS; i++))
+        for ((i = 0; i < NUM_COMPONENTS; i++))
         do
           component=$(jq -c --argjson i "$i" '.components[$i]' "${SNAPSHOT_SPEC_FILE}")
-          containerImage=$(jq -r '.containerImage' <<< $component)
-          repository=$(jq -r '.repository' <<< $component)
-          imageTags=$(jq '.tags' <<< $component)
+          containerImage=$(jq -r '.containerImage' <<< "$component")
+          repository=$(jq -r '.repository' <<< "$component")
+          imageTags=$(jq '.tags' <<< "$component")
 
           # oras has very limited support for selecting the right auth entry,
           # so create a custom auth file with just one entry.
@@ -128,19 +132,20 @@ spec:
             '.auths."'"$source_repo"'" = .auths."'"$registry"'" | del(.auths."'"$registry"'")' > "$SOURCE_AUTH_FILE"
 
           arch_json=$(get-image-architectures "${containerImage}")
-          arches=$(jq -s 'map(.platform.architecture)' <<< $arch_json)
-          oses=$(jq -s 'map(.platform.os)' <<< $arch_json)
+          arches=$(jq -s 'map(.platform.architecture)' <<< "$arch_json")
+          oses=$(jq -s 'map(.platform.os)' <<< "$arch_json")
 
           # Just read the first from the list of architectures
-          os=$(jq -r '.[0]' <<< $oses)
-          arch=$(jq -r '.[0]' <<< $arches)
-          name=$(jq -r '.name' <<< $component)
-          git_sha=$(jq -r '.source.git.revision' <<< $component) # this sets the value to "null" if it doesn't exist
+          os=$(jq -r '.[0]' <<< "$oses")
+          arch=$(jq -r '.[0]' <<< "$arches")
+          name=$(jq -r '.name' <<< "$component")
           media_type=$(skopeo inspect --raw "docker://${containerImage}" | jq -r .mediaType)
           oras_args=()
+          platform=
           if [[ "$media_type" == "application/vnd.docker.distribution.manifest.list.v2+json" ]]\
             || [[ "$media_type" == "application/vnd.oci.image.index.v1+json" ]]; then
-            oras_args+=("--platform $os/$arch")
+            platform=$os/$arch
+            oras_args=(--platform "$platform")
           fi
 
           # we do not use oras_args here since we want to get the manifest index image digest
@@ -149,13 +154,13 @@ spec:
           RESULTS_JSON=$(jq --arg i "$i" --argjson arches "$arches" --argjson oses "$oses" --arg name "$name" \
             --arg sha "$origin_digest" \
             '.images[$i|tonumber] += {"arches": $arches, "oses": $oses, "name": $name, "shasum": $sha, "urls": []}' \
-              <<< $RESULTS_JSON)
+              <<< "$RESULTS_JSON")
 
           # Push source container if the component has pushSourceContainer: true or if the
           # pushSourceContainer key is missing from the component and the defaults has
           # pushSourceContainer: true
-          if [[ $(jq -r '.pushSourceContainer' <<< $component) == "true" ]] \
-            || [[ $(jq 'has("pushSourceContainer")' <<< $component) == "false" && \
+          if [[ $(jq -r '.pushSourceContainer' <<< "$component") == "true" ]] \
+            || [[ $(jq 'has("pushSourceContainer")' <<< "$component") == "false" && \
                   ${defaultPushSourceContainer} == "true" ]] ; then
 
             source_tag=${origin_digest/:/-}.src
@@ -163,7 +168,7 @@ spec:
             sourceContainer="${source_repo}:${source_tag}"
             # Check if the source container exists
             source_container_digest=$(oras resolve --registry-config "$SOURCE_AUTH_FILE" \
-              "${sourceContainer}" ${oras_args[@]})
+              "${sourceContainer}" "${oras_args[@]}")
 
             if [ -z "$source_container_digest" ] ; then
               echo "Error: Source container ${sourceContainer} not found!"
@@ -172,23 +177,23 @@ spec:
             # Push the source image with the source tag here. The source image will be
             # pushed with the provided tags below in the loop
             push_image "${source_container_digest}" "${name}" "${sourceContainer}" \
-              "${repository}" "${source_tag}" "${oras_args[@]}"
+              "${repository}" "${source_tag}" "$platform"
           fi
 
-          for tag in $(jq -r '.[]' <<< $imageTags) ; do
+          for tag in $(jq -r '.[]' <<< "$imageTags") ; do
             # Push the container image
             push_image "${origin_digest}" "${name}" "${containerImage}" "${repository}" "${tag}" \
-            "${arch}" "${oras_args[@]}"
+            "$platform"
 
             # This variable will only exist if the above logic determined the source container should
             # be pushed for this component
             if [ -n "${source_container_digest-}" ] ; then
               push_image "${source_container_digest}" "${name}" "${sourceContainer}" \
-                "${repository}" "${tag}-source" "${arch}" "${oras_args[@]}"
+                "${repository}" "${tag}-source" "$platform"
             fi
           done
         done
-        echo -n "${RESULTS_JSON}" | tee $RESULTS_FILE
+        echo -n "${RESULTS_JSON}" | tee "$RESULTS_FILE"
         printf 'Completed "%s" for "%s"\n\n' "$(context.task.name)" "$application"
       volumeMounts:
         - name: trusted-ca

@@ -26,8 +26,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)"/snapshot.json << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -50,7 +50,7 @@ spec:
               }
               EOF
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)"/data.json << EOF
               {
                 "mapping": {
                   "defaults": {

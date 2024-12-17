@@ -23,8 +23,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir $(workspaces.data.path)/results
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              mkdir "$(workspaces.data.path)/results"
+              cat > "$(workspaces.data.path)"/snapshot.json << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -50,7 +50,7 @@ spec:
               }
               EOF
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)"/data.json << EOF
               {
                 "mapping": {
                   "defaults": {
@@ -96,30 +96,31 @@ spec:
 
               # 2 for comp1 (the 2 provided tags)
               # 3 for comp2 (provided tag, once for image, once for source container, + once for source tag)
-              if [ $(cat $(workspaces.data.path)/mock_cosign.txt | wc -l) != 5 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_cosign.txt")" != 5 ]; then
                 echo Error: cosign was expected to be called 5 times. Actual calls:
-                cat $(workspaces.data.path)/mock_cosign.txt
+                cat "$(workspaces.data.path)/mock_cosign.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_skopeo.txt | wc -l) != 2 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_skopeo.txt")" != 2 ]; then
                 echo Error: skopeo was expected to be called 2 times. Actual calls:
-                cat $(workspaces.data.path)/mock_skopeo.txt
+                cat "$(workspaces.data.path)/mock_skopeo.txt"
                 exit 1
               fi
 
-              if [ $(cat $(workspaces.data.path)/mock_oras.txt | wc -l) != 8 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/mock_oras.txt")" != 8 ]; then
                 echo Error: oras was expected to be called 8 times. Actual calls:
-                cat $(workspaces.data.path)/mock_oras.txt
+                cat "$(workspaces.data.path)/mock_oras.txt"
                 exit 1
               fi
 
-              test $(jq -r '.images[0].name' $(workspaces.data.path)/results/push-snapshot-results.json) == "comp1"
-              test $(jq -r '.images[0].shasum' $(workspaces.data.path)/results/push-snapshot-results.json) == \
+              test "$(jq -r '.images[0].name' "$(workspaces.data.path)/results/push-snapshot-results.json")" == "comp1"
+              test "$(jq -r '.images[0].shasum' "$(workspaces.data.path)/results/push-snapshot-results.json")" == \
                 "sha256:6ff029b0b6cf82e3df2a2360dc88cd527c51132b557207d64634d9c245e0d15e"
-              test $(jq -r '.images[0].urls | length' $(workspaces.data.path)/results/push-snapshot-results.json) \
+              test "$(jq -r '.images[0].urls | length' "$(workspaces.data.path)/results/push-snapshot-results.json")" \
                 == "2"
-              test $(jq -r '.images[0].arches | length' $(workspaces.data.path)/results/push-snapshot-results.json) \
+              test "$(jq -r '.images[0].arches | length' \
+                "$(workspaces.data.path)/results/push-snapshot-results.json")" \
                 == "2"
       runAfter:
         - run-task
