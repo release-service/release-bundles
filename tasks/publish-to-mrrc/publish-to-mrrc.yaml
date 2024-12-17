@@ -45,7 +45,7 @@ spec:
         - name: workdir
           mountPath: "/workdir"
     - name: upload-maven-repo
-      image: quay.io/konflux-ci/charon:b99585182f6750b3f6352889fe9c2222b57833ef
+      image: quay.io/konflux-ci/charon@sha256:95b22f4f0fc1d6bb984a2f63334c3f66a539e433d79cde4eafa7731d8924377f
       script: |
         #!/usr/bin/env bash
         set -eux
