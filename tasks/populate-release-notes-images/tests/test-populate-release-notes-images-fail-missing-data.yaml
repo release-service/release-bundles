@@ -25,7 +25,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              cat > "$(workspaces.data.path)/snapshot.json" << EOF
               {
                 "application": "myapp",
                 "components": [

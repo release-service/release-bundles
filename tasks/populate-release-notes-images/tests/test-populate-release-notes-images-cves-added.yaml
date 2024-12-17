@@ -24,7 +24,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > $(workspaces.data.path)/data.json << EOF
+              cat > "$(workspaces.data.path)/data.json" << EOF
               {
                 "releaseNotes": {
                   "cves": [
@@ -85,7 +85,7 @@ spec:
               }
               EOF
 
-              cat > $(workspaces.data.path)/snapshot.json << EOF
+              cat > "$(workspaces.data.path)/snapshot.json" << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -130,9 +130,10 @@ spec:
               set -eux
 
               # The CVEs should be present in the comp image section
-              test $(jq '.releaseNotes.content.images[0].cves.fixed | length' "$(workspaces.data.path)/data.json") == 2
-              test "$(jq -jr '.releaseNotes.content.images[0].cves.fixed | keys[]' $(workspaces.data.path)/data.json)" \
-                == "CVE-123CVE-456"
+              test "$(jq '.releaseNotes.content.images[0].cves.fixed | length' "$(workspaces.data.path)/data.json")" \
+                == 2
+              test "$(jq -jr '.releaseNotes.content.images[0].cves.fixed | keys[]' \
+                "$(workspaces.data.path)/data.json")" == "CVE-123CVE-456"
               test "$(jq '.releaseNotes.content.images[1].cves.fixed."CVE-123".packages | length' \
                 "$(workspaces.data.path)/data.json")" == 0
       runAfter:

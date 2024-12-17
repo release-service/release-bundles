@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: populate-release-notes-images
   labels:
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.3.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -52,7 +52,7 @@ spec:
         cp "${DATA_FILE}" "${sbomDataPath}"
 
         NUM_COMPONENTS=$(jq '.components | length' "${SNAPSHOT_FILE}")
-        for ((i = 0; i < $NUM_COMPONENTS; i++))
+        for ((i = 0; i < NUM_COMPONENTS; i++))
         do
             component=$(jq -c --argjson i "$i" '.components[$i]' "${SNAPSHOT_FILE}")
             name=$(jq -r '.name' <<< "$component")
@@ -71,7 +71,7 @@ spec:
             CVEsJson='{"cves":{"fixed":{}}}'
             CVES=$(jq -c '[.releaseNotes.cves[]? | select(.component=="'"$name"'")]' "${DATA_FILE}")
             NUM_CVES=$(jq 'length' <<< "$CVES")
-            for ((j = 0; j < $NUM_CVES; j++)); do
+            for ((j = 0; j < NUM_CVES; j++)); do
                 cve=$(jq -c --argjson j "$j" '.[$j]' <<< "$CVES")
                 cveJson=$(jq -n \
                     --arg id "$(jq -r '.key' <<< "$cve")" \

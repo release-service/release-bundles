@@ -12,6 +12,9 @@ path to a file containing data used in component SBOM generation.
 | dataPath     | Path to the JSON string of the merged data to update                 | No       | -             |
 | snapshotPath | Path to the JSON string of the mapped Snapshot in the data workspace | No       | -             |
 
+## Changes in 2.3.1
+* Fix shellcheck/checkton linting issues in the task and tests
+
 ## Changes in 2.3.0
 * Export additional image data to a file for component SBOM generation
 
