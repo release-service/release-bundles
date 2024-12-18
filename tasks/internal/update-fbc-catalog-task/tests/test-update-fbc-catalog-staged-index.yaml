@@ -1,0 +1,105 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-update-fbc-catalog-staged-index
+spec:
+  description: Tests a stage FBC release
+  tasks:
+    - name: run-task
+      taskRef:
+        name: update-fbc-catalog-task
+      params:
+        - name: fbcFragment
+          value: "registry.io/image0@sha256:0000"
+        - name: fromIndex
+          value: "quay.io/scoheb/fbc-index-testing:latest"
+        - name: targetIndex
+          value: "quay.io/fbc/catalog:test"
+        - name: buildTags
+          value: "[]"
+        - name: addArches
+          value: "[]"
+        - name: iibServiceAccountSecret
+          value: "iib-service-account-secret"
+        - name: stagedIndex
+          value: true
+    - name: check-result
+      params:
+        - name: jsonBuildInfo
+          value: $(tasks.run-task.results.jsonBuildInfo)
+        - name: buildState
+          value: $(tasks.run-task.results.buildState)
+        - name: genericResult
+          value: $(tasks.run-task.results.genericResult)
+        - name: indexImageDigests 
+          value: $(tasks.run-task.results.indexImageDigests)
+        - name: iibLog
+          value: $(tasks.run-task.results.iibLog)
+        - name: exitCode
+          value: $(tasks.run-task.results.exitCode)
+      taskSpec:
+        params:
+          - name: jsonBuildInfo
+            type: string
+          - name: buildState
+            type: string
+          - name: genericResult
+            type: string
+          - name: indexImageDigests
+            type: string
+          - name: iibLog
+            type: string
+          - name: exitCode
+            type: string
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/bin/bash
+              set -x
+
+              # the jsonBuild mockes has 10 keys on it
+              keyLength=$(jq '. | length' <<< '$(params.jsonBuildInfo)')
+              if [ "$keyLength" -ne 10 ]; then
+                echo "The task did not save a valid json in jsonBuildInfo result"
+                exit 1
+              fi
+
+              # shellcheck disable=SC2046 # (warning): Quote this to prevent word splitting
+              # reason: wrapping the tekton parameters in the following line with double quotes is adding unwanted
+              #         quotes to the contained json, breaking jq.
+              state="$(jq -cr '.state' <<< $(params.buildState))"
+              if [ "$state" != "complete" ]; then
+                echo "The task did not save a completed IIB build in buildState result"
+                exit 1
+              fi
+
+              # shellcheck disable=SC2046 # (warning): Quote this to prevent word splitting
+              # reason: wrapping the tekton parameters in the following line with double quotes is adding unwanted
+              #         quotes to the contained json, breaking jq.
+              genericResult=$(jq -r \
+                '. |[.fbc_opt_in, .overwrite_fromindex_image, .publish_index_image,.sign_index_image] |@csv' \
+                <<< $(params.genericResult))
+              if [ "$genericResult" != '"true","false","false","false"' ]; then
+                echo "The stask did not save the correct values in genericResult result"
+                exit 1
+              fi
+
+              if [ "$(params.indexImageDigests)" != "sha256:000" ]; then
+                echo "The task did not save a valid digest image in the indexImageDigests result"
+                exit 1
+              fi
+
+              iibLog=$(awk '{match($0, /https.*/); print(substr($0, RSTART)) }' <<< "$(params.iibLog)")
+              if [  "$iibLog" != "https://fakeiib.host/api/v1/builds/1/logs" ]; then
+                echo "The task did not save a valid iib log url in the iibLog result"
+                exit 1
+              fi
+
+              if [ "$(params.exitCode)" != "0" ]; then
+                echo "The task did not finish with a successful exit code"
+                exit 1
+              fi
+      runAfter:
+        - run-task

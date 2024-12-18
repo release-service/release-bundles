@@ -1,0 +1,86 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: update-fbc-catalog
+  labels:
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: fbc
+spec:
+  description: >-
+    Tekton pipeline add/update FBC fragments to the FBC catalog by interacting with IIB service for File Based Catalogs
+  params:
+    - name: iibServiceAccountSecret
+      type: string
+      description: Secret containing the credentials for IIB service
+      default: iib-service-account
+    - name: fbcFragment
+      type: string
+      description: FBC fragment built by HACBS
+    - name: fromIndex
+      type: string
+      description: >-
+        Index image (catalog of catalogs) the FBC fragment will be added to
+    - name: targetIndex
+      type: string
+      description: >-
+        Target index is the pullspec the FBC catalog will be pushed to
+    - name: buildTags
+      type: string
+      default: '[]'
+      description: >-
+        List of additional tags the internal index image copy should be
+        tagged with
+    - name: addArches
+      type: string
+      default: '[]'
+      description: List of arches the index image should be built for
+    - name: hotfix
+      type: string
+      default: "false"
+      description: Whether this build is a hotfix build
+    - name: stagedIndex
+      type: string
+      default: "false"
+      description: Whether this build is a staged index build
+    - name: buildTimeoutSeconds
+      type: string
+      description: IIB Build Service timeout seconds
+  tasks:
+    - name: update-fbc-catalog-task
+      taskRef:
+        name: update-fbc-catalog-task
+      params:
+        - name: iibServiceAccountSecret
+          value: $(params.iibServiceAccountSecret)
+        - name: fbcFragment
+          value: $(params.fbcFragment)
+        - name: fromIndex
+          value: $(params.fromIndex)
+        - name: targetIndex
+          value: $(params.targetIndex)
+        - name: buildTags
+          value: $(params.buildTags)
+        - name: addArches
+          value: $(params.addArches)
+        - name: hotfix
+          value: $(params.hotfix)
+        - name: stagedIndex
+          value: $(params.stagedIndex)
+        - name: buildTimeoutSeconds
+          value: $(params.buildTimeoutSeconds)
+  results:
+    - name: jsonBuildInfo
+      value: $(tasks.update-fbc-catalog-task.results.jsonBuildInfo)
+    - name: buildState
+      value: $(tasks.update-fbc-catalog-task.results.buildState)
+    - name: genericResult
+      value: $(tasks.update-fbc-catalog-task.results.genericResult)
+    - name: indexImageDigests
+      value: $(tasks.update-fbc-catalog-task.results.indexImageDigests)
+    - name: iibLog
+      value: $(tasks.update-fbc-catalog-task.results.iibLog)
+    - name: exitCode
+      value: $(tasks.update-fbc-catalog-task.results.exitCode)

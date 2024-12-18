@@ -1,0 +1,324 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: update-fbc-catalog-task
+  labels:
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >-
+    Tekton task to submit a IIB build request to add/update a fbc-fragment to an index image
+  params:
+    - name: fbcFragment
+      type: string
+      description: FBC fragment built by HACBS
+    - name: fromIndex
+      type: string
+      description: >-
+        Index image (catalog of catalogs) the FBC fragment will be added to
+    - name: targetIndex
+      type: string
+      description: >-
+        Target index is the pullspec the FBC catalog will be pushed to
+    - name: buildTags
+      type: string
+      description: >-
+        List of additional tags the internal index image copy should be
+        tagged with.
+    - name: addArches
+      type: string
+      description: List of arches the index image should be built for.
+    - name: buildTimeoutSeconds
+      type: string
+      default: "300"
+      description: Timeout seconds to receive the build state
+    - name: iibServiceAccountSecret
+      type: string
+      description: Secret with IIB credentials to be used
+    - name: hotfix
+      type: string
+      default: "false"
+      description: Whether this build is a hotfix build
+    - name: stagedIndex
+      type: string
+      default: "false"
+      description: Whether this build is for a staged index build
+  results:
+    - name: jsonBuildInfo
+      description: JSON build information for the requested build
+    - name: buildState
+      description: IIB Service build state
+    - name: genericResult
+      description: Set the genericResult if FBC Fragment is Opt-In and should be published
+    - name: indexImageDigests
+      description: The digests for each arch for the manifest list of the index image
+    - name: iibLog
+      description: The link to the log from the IIB request
+    - name: exitCode
+      description: The exit code from the task
+  steps:
+    - name: update-fbc-catalog-prepare-and-call-iib-step
+      image: >-
+        quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      env:
+        - name: IIB_SERVICE_URL
+          valueFrom:
+            secretKeyRef:
+              name: iib-services-config
+              key: url
+        - name: IIB_OVERWRITE_FROM_INDEX_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: iib-overwrite-fromimage-credentials
+              key: username
+        - name: IIB_OVERWRITE_FROM_INDEX_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: iib-overwrite-fromimage-credentials
+              key: token
+        - name: KRB5_CONF_CONTENT
+          valueFrom:
+            secretKeyRef:
+              name: iib-services-config
+              key: krb5.conf
+      script: |
+        #!/usr/bin/env bash
+
+        isFBCOptIn() {
+          TMPFILE=$(mktemp)
+          PYXIS_URL="https://pyxis.engineering.redhat.com/v1"
+
+          IFS="/" read -r REGISTRY REPO IMAGE <<< "${1}"
+          IFS=":" read -r IMAGE TAG <<< "${IMAGE}"
+
+          FETCH_URL="${PYXIS_URL}/repositories/registry/${REGISTRY}/repository/${REPO}/${IMAGE}/tag/${TAG}"
+
+          # strips the last "/tag" in case $TAG is not set
+          [ -z "${TAG}" ] && FETCH_URL=${FETCH_URL%/tag*}
+
+          curl --negotiate -u: "${FETCH_URL}" -o "${TMPFILE}"
+
+          # prints "false" in case .fbc_opt_in entry is missing
+          jq -e -r '.fbc_opt_in //false' "${TMPFILE}" && rm -f "${TMPFILE}"
+        }
+
+        # checks if there is any previous build for the same fbc_fragment.
+        # in case multiple builds are found, returns only the last one.
+        check_previous_build() {
+          user="${1}"
+          from_index="${2}"
+          fbc_fragment="${3}"
+
+          # fetch only builds in progress or completed
+          build=$(curl -s "${IIB_SERVICE_URL}/builds?user=${user}&from_index=${from_index}" | \
+            jq --arg fbc_fragment "${fbc_fragment}" \
+              '[.items[] |select(.fbc_fragment==$fbc_fragment and .state!="failed")][0] // empty')
+
+          if [ "$(jq -r '.state' <<< "${build}")" = "complete" ]; then
+            indexImageResolved="$(jq -r '.index_image_resolved' <<<  "${build}")"
+            newCatalogCreatedDate="$(date --date "$(skopeo inspect --config "docker://${indexImageResolved}" | \
+              jq -r .created)" "+%s")"
+            upstreamCatalogCreatedDate="$(date --date "$(skopeo inspect --config "docker://$(params.targetIndex)" | \
+              jq -r .created)" "+%s")"
+            # checks if the index_image_resolved in the previous completed build is newer
+            # than the upstream catalog index.
+            # in case the new catalog index is older than the upstream, a new build is
+            # required to assure the catalog integrity.
+            if [ "${newCatalogCreatedDate}" -gt "${upstreamCatalogCreatedDate}" ]; then
+              echo "${build}"
+              exit
+            fi
+          fi
+        }
+
+        # performs kerberos authentication.
+        base64 -d /mnt/service-account-secret/keytab > "/tmp/keytab"
+
+        KRB5_TEMP_CONF=$(mktemp)
+        KRB5_PRINCIPAL=$(cat /mnt/service-account-secret/principal)
+
+        echo "${KRB5_CONF_CONTENT}" > "${KRB5_TEMP_CONF}"
+        export KRB5_CONFIG="${KRB5_TEMP_CONF}"
+        export KRB5_TRACE=/dev/stderr
+
+        kinit -V "${KRB5_PRINCIPAL}" -k -t "/tmp/keytab"
+
+        set -x
+        # check if this fbc fragment is opt-in
+        echo "Fetching the image bundle from $(params.fbcFragment)..."
+        PULL_SPEC_LIST=$(opm render "$(params.fbcFragment)" | jq -r \
+        'select(.schema == "olm.bundle") | "\(.image)" | split("@")[0]' |uniq)
+
+        fbcOptIn="true"
+        for PULL_SPEC in ${PULL_SPEC_LIST}; do
+            # make sure they query is done using the internal name instead of the public
+            PULL_SPEC="${PULL_SPEC//registry.redhat.io/registry.access.redhat.com}"
+            echo "Attempting to fetch from ${FETCH_URL} to check if fragment is \`fbc_opt_in==true\`..."
+            if [ "$(isFBCOptIn "${PULL_SPEC}")" = "false" ]; then
+              fbcOptIn="false"
+              break
+            fi
+        done
+        mustOverwriteFromIndexImage="${fbcOptIn}"
+        mustPublishIndexImage="${fbcOptIn}"
+        mustSignIndexImage="${fbcOptIn}"
+
+        if [ "$(params.hotfix)" == "true" ]; then
+            echo "Hotfix build"
+            mustOverwriteFromIndexImage="false"
+            mustSignIndexImage="true"
+            mustPublishIndexImage="true"
+        elif [ "$(params.stagedIndex)" == "true" ]; then
+            echo "Staged Index build"
+            mustOverwriteFromIndexImage="false"
+            mustSignIndexImage="false"
+            mustPublishIndexImage="false"
+        fi
+
+        echo "Fragment has \`fbc_opt_in==${fbcOptIn}\`"
+        echo "             \`mustOverwriteFromIndexImage==${mustOverwriteFromIndexImage}\`"
+        echo "             \`mustPublishIndexImage==${mustPublishIndexImage}\`"
+        echo "             \`mustSignIndexImage==${mustSignIndexImage}\`"
+
+        # these results will be used by add-fbc-contribution to control
+        # signing and publishing of the built fragment
+        jq -n -c \
+           --arg fbc_opt_in "${fbcOptIn}" \
+           --arg overwrite_fromindex_image "${mustOverwriteFromIndexImage}" \
+           --arg publish_index_image "${mustPublishIndexImage}" \
+           --arg sign_index_image "${mustSignIndexImage}" \
+           '{
+             "fbc_opt_in": $fbc_opt_in,
+             "overwrite_fromindex_image": $overwrite_fromindex_image,
+             "publish_index_image": $publish_index_image,
+             "sign_index_image": $sign_index_image
+            } | tostring' | tee "$(results.genericResult.path)"
+
+        # if it finds a build which is completed or in progress, it should exit this step and jump to
+        # the next step `s-wait-for-build-state` which will watch the build until it is completed.
+        build=$(check_previous_build "${KRB5_PRINCIPAL}" "$(params.fromIndex)" "$(params.fbcFragment)")
+        if [ -n "${build}" ]; then
+          echo "=== A previous build for this fragment was found ==="
+          echo "${build}" |tee "$(results.jsonBuildInfo.path)"
+          exit 0
+        fi
+
+        # adds the json request parameters to a file to be used as input data
+        # for curl and preventing shell expansion.
+        json_input="/tmp/$$.tmp"
+        json_raw_input="/tmp/$$_raw.tmp"
+
+        cat > "$json_raw_input" <<JSON
+        {
+          "fbc_fragment": "$(params.fbcFragment)",
+          "from_index": "$(params.fromIndex)",
+          "build_tags": $(params.buildTags),
+          "add_arches": $(params.addArches),
+          "overwrite_from_index": ${mustOverwriteFromIndexImage},
+          "overwrite_from_index_token": "${IIB_OVERWRITE_FROM_INDEX_USERNAME}:${IIB_OVERWRITE_FROM_INDEX_TOKEN}"
+        }
+        JSON
+
+        # filtering out empty params
+        jq -r '
+          if .overwrite_from_index == false then del(( .overwrite_from_index, .overwrite_from_index_token)) else . end |
+          if(.add_arches | length) == 0 then del(.add_arches) else . end |
+          if(.build_tags | length) == 0 then del(.build_tags) else . end' "${json_raw_input}" > "${json_input}"
+
+        echo "Calling IIB endpoint" > "$(results.buildState.path)"
+        # adds image to the index.
+        curl -u : --negotiate -s -X POST -H "Content-Type: application/json" -d@"${json_input}" --insecure \
+        "${IIB_SERVICE_URL}/builds/fbc-operations" |tee "$(results.jsonBuildInfo.path)"
+
+        # checks if the previous call returned an error.
+        ! jq -e -r ".error | select( . != null )" "$(results.jsonBuildInfo.path)"
+      volumeMounts:
+        - name: service-account-secret
+          mountPath: /mnt/service-account-secret
+    - name: update-fbc-catalog-wait-for-iib-build-step
+      image: >-
+        quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      env:
+        - name: IIB_SERVICE_URL
+          valueFrom:
+            secretKeyRef:
+              name: iib-services-config
+              key: url
+      script: |
+        #!/usr/bin/env bash
+        # shellcheck disable=SC2317 # shellcheck calls all the commands in the function unreachable
+        set -x
+
+        watch_build_state() {
+            build_id="$(jq -r ".id" "$(results.jsonBuildInfo.path)")"
+            state=""
+            while true; do
+                #
+                # fetching build information.
+                build_info=$(curl -s "${IIB_SERVICE_URL}/builds/${build_id}")
+                # get state from the build information.
+                state="$(jq -r ".state" <<< "${build_info}")"
+                # remove the history as it breaks the results build up
+                jq -r 'del(.state_history)' <<< "${build_info}" | jq -c . > "$(results.jsonBuildInfo.path)"
+                url="$(jq -r ".logs.url" <<< "${build_info}")"
+                echo IIB log url is: "${url}" > "$(results.iibLog.path)"
+                case ${state} in
+                  "complete") break ;;
+                  "failed") break ;;
+                  *) echo -en "."; sleep 30; continue ;;
+                esac
+            done
+            echo
+            jq -cr '{ "state": .state, "state_reason": .state_reason }' "$(results.jsonBuildInfo.path)" | jq -Rc \
+            | tee "$(results.buildState.path)"
+            test "${state}" = "complete" && exit 0 || exit 1
+        }
+
+        echo -en "waiting for build state to exit..."
+        # adding timeout here due to the Task timeout not accepting $(params.buildTimeoutSeconds)
+        # as parameter.
+        export -f watch_build_state
+        timeout "$(params.buildTimeoutSeconds)" bash -c watch_build_state
+        BUILDEXIT=$?
+
+        # it should continue only if the IIB build status is complete
+        if [ ${BUILDEXIT} -eq 0 ]; then
+            echo -n 0 > "$(results.exitCode.path)"
+
+            # get the manifest digests
+            indexImageCopy=$(jq -cr .internal_index_image_copy < "$(results.jsonBuildInfo.path)")
+            # Use this to obtain the manifest digests for each arch in manifest list
+            indexImageDigestsRaw=$(skopeo inspect --raw "docker://${indexImageCopy}")
+            # according the IIB team,
+            #  "all index images will always be multi-arch with a manifest list"
+            #
+            indexImageDigests=$(echo "${indexImageDigestsRaw}" | \
+               jq -r \
+               '.manifests[]? | select(.mediaType=="application/vnd.docker.distribution.manifest.v2+json") | .digest')
+            echo -n "${indexImageDigests}" > "$(results.indexImageDigests.path)"
+            if [ -z "${indexImageDigests}" ] ; then
+              echo "Index image produced is not multi-arch with a manifest list"
+              echo -n 1 > "$(results.exitCode.path)"
+            fi
+        else
+            if [ ${BUILDEXIT} -eq 124 ]; then
+                echo "Timeout while waiting for the build to finish"
+                echo "Build timeout" > "$(results.buildState.path)"
+            fi
+            echo -n "" > "$(results.indexImageDigests.path)"
+            echo -n "$BUILDEXIT" > "$(results.exitCode.path)"
+        fi
+        # We don't put the log in a result because tekton results are too limited for what we can put
+        # to be useful, but still print it for debugging
+        curl -s "$(awk '{print $NF}' < "$(results.iibLog.path)")"
+
+        exit 0
+  volumes:
+    - name: service-account-secret
+      secret:
+        secretName: $(params.iibServiceAccountSecret)
+        defaultMode:
+          0400
