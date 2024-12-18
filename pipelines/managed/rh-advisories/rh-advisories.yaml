@@ -498,8 +498,8 @@ spec:
         - name: data
           workspace: release-workspace
       params:
-        - name: dataJsonPath
-          value: "$(tasks.collect-data.results.data)"
+        - name: sbomJsonPath
+          value: "$(tasks.populate-release-notes-images.results.sbomDataPath)"
         - name: downloadedSbomPath
           value: "$(tasks.push-rpm-data-to-pyxis.results.sbomPath)"
       runAfter:
