@@ -25,6 +25,9 @@ data:
         configMapName: <configmap name>
 ```
 
+## Changes in 2.4.1
+* Fix shellcheck/checkton linting issues in the task and tests
+
 ## Changes in 2.4.0
 * No longer examine `.data.sign.request` to obtain the Signing pipeline name. Use the default - blob-signing-pipeline
 
