@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: check-data-keys
   labels:
-    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/version: "1.0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -40,7 +40,7 @@ spec:
             exit 1
         fi
 
-        if ! curl -s --fail-with-body "$(params.schema)" -o /tmp/schema ; then
+        if ! curl -sL --fail-with-body "$(params.schema)" -o /tmp/schema ; then
             echo "Failed to download schema file: $(params.schema)"
             exit 1
         fi

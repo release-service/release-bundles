@@ -13,7 +13,11 @@ Currently, `releaseNotes`, and `cdn` are the only supported systems.
 |----------|---------------------------------------------------------|----------|---------------|
 | dataPath | Path to the JSON string of the merged data to use       | No       |               |
 | systems  | The systems to check that all data keys are present for | Yes      | []            |
-| schema   | The URl to the schema                                   | Yes      | https://github.com/konflux-ci/release-service-catalog/blob/production/schema/dataKeys.json |
+| schema   | The URl to the schema                                   | Yes      | https://raw.githubusercontent.com/konflux-ci/release-service-catalog/refs/heads/development/schema/dataKeys.json |
+
+## Changes in 1.0.1
+* Add `-L` option to curl command to follow redirects for schema download.
+* Fixes README.md `schema` parameter description.
 
 ## Changes in 1.0.0
 * Replacing the check with a schema validator

@@ -19,6 +19,9 @@ Tekton release pipeline to release binaries extracted from the image built with 
 | taskGitUrl                | The url to the git repo where the release-service-catalog tasks to be used are stored | Yes | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision           | The revision in the taskGitUrl repo to be used                        | No        | -            |
 
+## Changes in 4.1.0
+* Add the `check-data-keys` task to validate the `data.json` file using the JSON schema.
+
 ## Changes in 4.0.0
 * Drop the `enterpriseContractPublicKey` param. The verify task will take the value from the policy.
 

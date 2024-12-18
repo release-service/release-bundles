@@ -23,6 +23,10 @@ the rh-push-to-registry-redhat-io pipeline.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 1.6.0
+* Add new parameter `schema` to the `check-data-keys` task. 
+* Add new systems pyxis,mapping & signing to the task.
+
 ## Changes in 1.5.7
 * new mandatory parameter `dataPath` added to `create-pyxis-image` task
 

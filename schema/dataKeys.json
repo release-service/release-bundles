@@ -6,7 +6,17 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["releaseNotes", "cdn"],
+        "enum": [
+          "releaseNotes",
+          "cdn",
+          "fbc",
+          "sign",
+          "mrrc",
+          "github",
+          "contentGateway",
+          "pyxis",
+          "mapping"
+        ],
         "description": "List of systems that are supported to be required in the data"
       }
     },
@@ -49,8 +59,7 @@
         },
         "productName": {
           "type": "string",
-          "description": "The product name e.g. exampleproduct ",
-          "pattern": "^[a-z]+$"
+          "description": "The product name e.g. exampleproduct"
         },
         "productVersion": {
           "type": "string",
@@ -426,7 +435,6 @@
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": false,
                       "properties": {
                         "name": {
                           "type": "string",
@@ -577,9 +585,7 @@
         }
       },
       "then": {
-        "required": [
-          "releaseNotes"
-        ],
+        "required": ["releaseNotes"],
         "properties": {
           "releaseNotes": {
             "required": [
@@ -597,9 +603,7 @@
             ],
             "properties": {
               "content": {
-                "required": [
-                  "images"
-                ]
+                "required": ["images"]
               }
             }
           }
@@ -617,14 +621,256 @@
         }
       },
       "then": {
-        "required": [
-          "cdn"
-        ],
+        "required": ["cdn"],
         "properties": {
           "cdn": {
+            "required": ["env"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "fbc"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["fbc"],
+        "properties": {
+          "fbc": {
             "required": [
-              "env"
+              "fromIndex",
+              "publishingCredentials",
+              "allowedPackages"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "fbc"
+            }
+          },
+          "fbc": {
+            "properties": {
+              "preGA": {
+                "enum": [true]
+              }
+            },
+            "required": ["preGA"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fbc": {
+            "required": ["targetIndex", "productName", "productVersion"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "fbc"
+            }
+          },
+          "fbc": {
+            "properties": {
+              "hotfix": {
+                "enum": [true]
+              }
+            },
+            "required": ["hotfix"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fbc": {
+            "required": ["targetIndex", "issueId"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "fbc"
+            }
+          },
+          "fbc": {
+            "properties": {
+              "stagedIndex": {
+                "not": {
+                  "enum": [true]
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fbc": {
+            "required": ["targetIndex"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "sign"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["sign"],
+        "properties": {
+          "sign": {
+            "required": ["configMapName"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "mrrc"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["mrrc"],
+        "properties": {
+          "mrrc": {
+            "required": ["environment", "release", "awsSecret", "charonConfig"]
+          },
+          "releaseNotes": {
+            "required": ["product_name", "product_version"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "github"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["github"],
+        "properties": {
+          "github": {
+            "required": ["githubSecret"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "contentGateway"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mapping": {
+            "properties": {
+              "components": {
+                "items": {
+                  "properties": {
+                    "contentGateway": {
+                      "required": [
+                        "productName",
+                        "productCode",
+                        "productVersionName",
+                        "mirrorOpenshiftPush",
+                        "components"
+                      ],
+                      "properties": {
+                        "components": {
+                          "items": {
+                            "required": ["name", "description"]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "pyxis"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["pyxis"],
+        "properties": {
+          "pyxis": {
+            "required": ["server", "secret"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "systems": {
+            "contains": {
+              "const": "mapping"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mapping": {
+            "properties": {
+              "components": {
+                "items": {
+                  "required": ["name", "repository"]
+                }
+              }
+            }
           }
         }
       }

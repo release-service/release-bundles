@@ -19,5 +19,8 @@ Tekton pipeline to release a single FBC component to the Addons Registry.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 0.1.0
+* Add the `check-data-keys` task to validate the `data.json` file using the JSON schema.
+
 ## Changes in 0.0.1
 * Initially forked from push-to-external-registry v5.2.1

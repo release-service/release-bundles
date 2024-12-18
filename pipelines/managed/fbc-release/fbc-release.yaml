@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: fbc-release
   labels:
-    app.kubernetes.io/version: "4.0.4"
+    app.kubernetes.io/version: "4.1.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -122,6 +122,30 @@ spec:
           workspace: release-workspace
       runAfter:
         - verify-access-to-resources
+    - name: check-data-keys
+      params:
+        - name: dataPath
+          value: "$(tasks.collect-data.results.data)"
+        - name: schema
+          value: $(params.taskGitUrl)/raw/$(params.taskGitRevision)/schema/dataKeys.json
+        - name: systems
+          value: 
+            - fbc
+            - sign
+      taskRef:
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/check-data-keys/check-data-keys.yaml
+        resolver: git
+      workspaces:
+        - name: data
+          workspace: release-workspace
+      runAfter:
+        - collect-data
     - name: validate-single-component
       taskRef:
         resolver: "git"
