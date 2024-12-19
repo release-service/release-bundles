@@ -15,6 +15,9 @@ Currently, `releaseNotes`, and `cdn` are the only supported systems.
 | systems  | The systems to check that all data keys are present for | Yes      | []            |
 | schema   | The URl to the schema                                   | Yes      | https://raw.githubusercontent.com/konflux-ci/release-service-catalog/refs/heads/development/schema/dataKeys.json |
 
+## Changes in 1.0.2
+* Strip the `.git/` suffix from the `schema` value if present. Some `taskGitUrl`s add this suffix which results in invalid schema files being passed
+
 ## Changes in 1.0.1
 * Add `-L` option to curl command to follow redirects for schema download.
 * Fixes README.md `schema` parameter description.
