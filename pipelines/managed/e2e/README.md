@@ -20,6 +20,9 @@ affected by RHTAP services or which results could affect the RHTAP workflow.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                         | No       | -             |
 
+## Changes in 3.1.0
+* Update all task pathInRepo values as they are now in `tasks/managed`
+
 ## Changes in 3.0.0
 * Drop the `enterpriseContractPublicKey` param. The verify task will take the value from the policy.
 

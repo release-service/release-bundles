@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: push-disk-images-to-marketplaces
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -67,7 +67,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -90,7 +90,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -118,7 +118,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/reduce-snapshot/reduce-snapshot.yaml
+            value: tasks/managed/reduce-snapshot/reduce-snapshot.yaml
       params:
         - name: SNAPSHOT
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
@@ -144,7 +144,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/apply-mapping/apply-mapping.yaml
+            value: tasks/managed/apply-mapping/apply-mapping.yaml
       params:
         - name: failOnEmptyResult
           value: "true"
@@ -196,7 +196,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-marketplacesvm-params/collect-marketplacesvm-params.yaml
+            value: tasks/managed/collect-marketplacesvm-params/collect-marketplacesvm-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -219,7 +219,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/marketplacesvm-push-disk-images/marketplacesvm-push-disk-images.yaml
+            value: tasks/managed/marketplacesvm-push-disk-images/marketplacesvm-push-disk-images.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -244,7 +244,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in

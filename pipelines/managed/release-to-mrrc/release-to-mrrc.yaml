@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: release-to-mrrc
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -67,7 +67,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -88,7 +88,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -123,7 +123,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-data-keys/check-data-keys.yaml
+            value: tasks/managed/check-data-keys/check-data-keys.yaml
         resolver: git
       workspaces:
         - name: data
@@ -169,7 +169,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-mrrc-params/collect-mrrc-params.yaml
+            value: tasks/managed/collect-mrrc-params/collect-mrrc-params.yaml
       params:
         - name: dataJsonPath
           value: "$(tasks.collect-data.results.data)"
@@ -189,7 +189,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/publish-to-mrrc/publish-to-mrrc.yaml
+            value: tasks/managed/publish-to-mrrc/publish-to-mrrc.yaml
       params:
         - name: mrrcParamFilePath
           value: "$(tasks.collect-mrrc-params.results.mrrcParamFilePath)"
@@ -212,7 +212,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in

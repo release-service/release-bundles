@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: fbc-release
   labels:
-    app.kubernetes.io/version: "4.1.0"
+    app.kubernetes.io/version: "4.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -80,7 +80,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -103,7 +103,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -139,7 +139,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-data-keys/check-data-keys.yaml
+            value: tasks/managed/check-data-keys/check-data-keys.yaml
         resolver: git
       workspaces:
         - name: data
@@ -155,7 +155,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/validate-single-component/validate-single-component.yaml
+            value: tasks/managed/validate-single-component/validate-single-component.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -203,7 +203,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/get-ocp-version/get-ocp-version.yaml
+            value: tasks/managed/get-ocp-version/get-ocp-version.yaml
       params:
         - name: fbcFragment
           value: "$(tasks.collect-data.results.fbcFragment)"
@@ -221,7 +221,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-ocp-tag/update-ocp-tag.yaml
+            value: tasks/managed/update-ocp-tag/update-ocp-tag.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -242,7 +242,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-fbc-packages/check-fbc-packages.yaml
+            value: tasks/managed/check-fbc-packages/check-fbc-packages.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -262,7 +262,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/add-fbc-contribution/add-fbc-contribution.yaml
+            value: tasks/managed/add-fbc-contribution/add-fbc-contribution.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -320,7 +320,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/sign-index-image/sign-index-image.yaml
+            value: tasks/managed/sign-index-image/sign-index-image.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -357,7 +357,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/extract-index-image/extract-index-image.yaml
+            value: tasks/managed/extract-index-image/extract-index-image.yaml
       params:
         - name: inputDataFile
           value: $(tasks.add-fbc-contribution-to-index-image.results.requestResultsFile)
@@ -375,7 +375,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/publish-index-image/publish-index-image.yaml
+            value: tasks/managed/publish-index-image/publish-index-image.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -409,7 +409,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-cr-status/update-cr-status.yaml
+            value: tasks/managed/update-cr-status/update-cr-status.yaml
       workspaces:
         - name: data
           workspace: release-workspace
@@ -425,7 +425,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in

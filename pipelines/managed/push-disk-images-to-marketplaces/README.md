@@ -19,5 +19,8 @@ Tekton Pipeline to push disk images to various cloud marketplaces
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                         | No       | -                                                         |
 
+## Changes in 0.3.0
+* Update all task pathInRepo values as they are now in `tasks/managed`
+
 ## Changes in 0.2.0
 * Allow `marketplacesvm-push-disk-images` task to run in pre-push mode.

@@ -117,3 +117,14 @@ spec:
                 echo "push-disk-images results do not contain expected file names"
                 exit 1
               fi
+  finally:
+    - name: cleanup
+      taskSpec:
+        steps:
+          - name: delete-crs
+            image: quay.io/konflux-ci/release-service-utils:6a7ca9ba0ddd70404fe2267551409925cf513132
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              kubectl delete internalrequests --all

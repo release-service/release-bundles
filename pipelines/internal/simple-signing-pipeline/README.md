@@ -14,6 +14,9 @@ Tekton pipeline for simple signing. It is meant to be used by the rh-sign-image 
 | taskGitUrl      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision | The revision in the taskGitUrl repo to be used                                                         | No       | -                                                         |
 
+## Changes in 0.3.0
+* Update all task pathInRepo values as they are now in `tasks/internal`
+
 ## Changes in 0.2.0
 * Changed the results used as parameters to `request-and-upload-signature`
   * Instead of using the same results for both the Pyxis and UMB SSL authentication, the two were split into

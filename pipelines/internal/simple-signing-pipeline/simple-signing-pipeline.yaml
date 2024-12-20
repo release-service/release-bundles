@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: simple-signing-pipeline
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -49,7 +49,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-simple-signing-params/collect-simple-signing-params.yaml
+            value: tasks/internal/collect-simple-signing-params/collect-simple-signing-params.yaml
       params:
         - name: config_map_name
           value: $(params.config_map_name)
@@ -63,7 +63,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/request-and-upload-signature/request-and-upload-signature.yaml
+            value: tasks/internal/request-and-upload-signature/request-and-upload-signature.yaml
       params:
         - name: config_map_name
           value: $(params.config_map_name)

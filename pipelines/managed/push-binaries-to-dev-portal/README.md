@@ -19,6 +19,9 @@ Tekton pipeline to sign and release Red Hat binaries to the Red Hat Developer Po
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                  | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                         | No       | -             |
 
+## Changes in 1.6.0
+* Update all task pathInRepo values as they are now in `tasks/managed`
+
 ## Changes in 1.5.0
 * Add the `check-data-keys` task to validate the `data.json` file using the JSON schema.
 

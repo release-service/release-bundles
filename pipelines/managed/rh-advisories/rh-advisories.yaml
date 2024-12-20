@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.7.0"
+    app.kubernetes.io/version: "1.8.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -75,7 +75,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -98,7 +98,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -126,7 +126,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/reduce-snapshot/reduce-snapshot.yaml
+            value: tasks/managed/reduce-snapshot/reduce-snapshot.yaml
       params:
         - name: SNAPSHOT
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
@@ -180,7 +180,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/apply-mapping/apply-mapping.yaml
+            value: tasks/managed/apply-mapping/apply-mapping.yaml
       params:
         - name: failOnEmptyResult
           value: "true"
@@ -239,7 +239,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/populate-release-notes-images/populate-release-notes-images.yaml
+            value: tasks/managed/populate-release-notes-images/populate-release-notes-images.yaml
         resolver: git
       runAfter:
         - apply-mapping
@@ -259,7 +259,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/embargo-check/embargo-check.yaml
+            value: tasks/managed/embargo-check/embargo-check.yaml
         resolver: git
       workspaces:
         - name: data
@@ -275,7 +275,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-cosign-params/collect-cosign-params.yaml
+            value: tasks/managed/collect-cosign-params/collect-cosign-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -297,7 +297,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/rh-sign-image-cosign/rh-sign-image-cosign.yaml
+            value: tasks/managed/rh-sign-image-cosign/rh-sign-image-cosign.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -326,7 +326,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/push-snapshot/push-snapshot.yaml
+            value: tasks/managed/push-snapshot/push-snapshot.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -348,7 +348,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-pyxis-params/collect-pyxis-params.yaml
+            value: tasks/managed/collect-pyxis-params/collect-pyxis-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -368,7 +368,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/rh-sign-image/rh-sign-image.yaml
+            value: tasks/managed/rh-sign-image/rh-sign-image.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -412,7 +412,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/create-pyxis-image/create-pyxis-image.yaml
+            value: tasks/managed/create-pyxis-image/create-pyxis-image.yaml
       params:
         - name: server
           value: $(tasks.collect-pyxis-params.results.server)
@@ -439,7 +439,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/publish-pyxis-repository/publish-pyxis-repository.yaml
+            value: tasks/managed/publish-pyxis-repository/publish-pyxis-repository.yaml
       params:
         - name: server
           value: $(tasks.collect-pyxis-params.results.server)
@@ -467,7 +467,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/push-rpm-data-to-pyxis/push-rpm-data-to-pyxis.yaml
+            value: tasks/managed/push-rpm-data-to-pyxis/push-rpm-data-to-pyxis.yaml
       params:
         - name: pyxisJsonPath
           value: $(tasks.create-pyxis-image.results.pyxisDataPath)
@@ -492,7 +492,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-component-sbom/update-component-sbom.yaml
+            value: tasks/managed/update-component-sbom/update-component-sbom.yaml
         resolver: git
       workspaces:
         - name: data
@@ -528,7 +528,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
+            value: tasks/managed/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
         resolver: git
       workspaces:
         - name: data
@@ -557,7 +557,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/run-file-updates/run-file-updates.yaml
+            value: tasks/managed/run-file-updates/run-file-updates.yaml
         resolver: git
       workspaces:
         - name: data
@@ -581,7 +581,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-data-keys/check-data-keys.yaml
+            value: tasks/managed/check-data-keys/check-data-keys.yaml
         resolver: git
       workspaces:
         - name: data
@@ -597,7 +597,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-atlas-params/collect-atlas-params.yaml
+            value: tasks/managed/collect-atlas-params/collect-atlas-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -621,7 +621,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/create-product-sbom/create-product-sbom.yaml
+            value: tasks/managed/create-product-sbom/create-product-sbom.yaml
         resolver: git
       workspaces:
         - name: data
@@ -650,7 +650,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
+            value: tasks/managed/upload-sbom-to-atlas/upload-sbom-to-atlas.yaml
         resolver: git
       workspaces:
         - name: data
@@ -677,7 +677,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/create-advisory/create-advisory.yaml
+            value: tasks/managed/create-advisory/create-advisory.yaml
         resolver: git
       workspaces:
         - name: data
@@ -703,7 +703,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-cr-status/update-cr-status.yaml
+            value: tasks/managed/update-cr-status/update-cr-status.yaml
       workspaces:
         - name: data
           workspace: release-workspace
@@ -719,7 +719,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in

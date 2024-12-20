@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rhtap-service-push
   labels:
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.4.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -67,7 +67,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -90,7 +90,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -126,7 +126,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-data-keys/check-data-keys.yaml
+            value: tasks/managed/check-data-keys/check-data-keys.yaml
         resolver: git
       workspaces:
         - name: data
@@ -142,7 +142,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/reduce-snapshot/reduce-snapshot.yaml
+            value: tasks/managed/reduce-snapshot/reduce-snapshot.yaml
       params:
         - name: SNAPSHOT
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
@@ -168,7 +168,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/apply-mapping/apply-mapping.yaml
+            value: tasks/managed/apply-mapping/apply-mapping.yaml
       params:
         - name: failOnEmptyResult
           value: "true"
@@ -224,7 +224,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/push-snapshot/push-snapshot.yaml
+            value: tasks/managed/push-snapshot/push-snapshot.yaml
       params:
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
@@ -250,7 +250,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-pyxis-params/collect-pyxis-params.yaml
+            value: tasks/managed/collect-pyxis-params/collect-pyxis-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -268,7 +268,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-slack-notification-params/collect-slack-notification-params.yaml
+            value: tasks/managed/collect-slack-notification-params/collect-slack-notification-params.yaml
       params:
         - name: releasePath
           value: "$(tasks.collect-data.results.release)"
@@ -294,7 +294,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/create-pyxis-image/create-pyxis-image.yaml
+            value: tasks/managed/create-pyxis-image/create-pyxis-image.yaml
       params:
         - name: server
           value: $(tasks.collect-pyxis-params.results.server)
@@ -318,7 +318,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/push-rpm-data-to-pyxis/push-rpm-data-to-pyxis.yaml
+            value: tasks/managed/push-rpm-data-to-pyxis/push-rpm-data-to-pyxis.yaml
       params:
         - name: pyxisJsonPath
           value: $(tasks.create-pyxis-image.results.pyxisDataPath)
@@ -338,7 +338,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-infra-deployments/update-infra-deployments.yaml
+            value: tasks/managed/update-infra-deployments/update-infra-deployments.yaml
       params:
         - name: gitImage
           value: >-
@@ -366,7 +366,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/update-cr-status/update-cr-status.yaml
+            value: tasks/managed/update-cr-status/update-cr-status.yaml
       workspaces:
         - name: data
           workspace: release-workspace
@@ -382,7 +382,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/send-slack-notification/send-slack-notification.yaml
+            value: tasks/managed/send-slack-notification/send-slack-notification.yaml
       when:
         - input: $(tasks.collect-slack-notification-params.results.slack-notification-secret)
           operator: notin
@@ -411,7 +411,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in

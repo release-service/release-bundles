@@ -19,6 +19,8 @@ Tekton release pipeline to release maven artifacts extracted from the maven repo
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | Yes      | production                                                |
 
+## Changes in 0.3.0
+* Update all task pathInRepo values as they are now in `tasks/managed`
 
 ## Changes in 0.2.0
 * Add the `check-data-keys` task to validate the `data.json` file using the JSON schema.

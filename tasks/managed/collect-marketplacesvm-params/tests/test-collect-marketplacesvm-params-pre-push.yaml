@@ -37,7 +37,7 @@ spec:
                     }
                   ],
                   "defaults": {},
-                  "cloudMarketplacesSecret": "eyJ0ZXN0Ijoic2VjcmV0In0K",
+                  "cloudMarketplacesSecret": "foobar",
                   "cloudMarketplacesPrePush": "true"
                 }
               }
@@ -75,5 +75,5 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              test "$SECRET" = "eyJ0ZXN0Ijoic2VjcmV0In0K"
+              test "$SECRET" = "foobar"
               test "$PREPUSH" = "true"

@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: push-binaries-to-dev-portal
   labels:
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.6.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -67,7 +67,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/verify-access-to-resources/verify-access-to-resources.yaml
+            value: tasks/managed/verify-access-to-resources/verify-access-to-resources.yaml
       params:
         - name: release
           value: $(params.release)
@@ -90,7 +90,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-data/collect-data.yaml
+            value: tasks/managed/collect-data/collect-data.yaml
       params:
         - name: release
           value: $(params.release)
@@ -126,7 +126,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/check-data-keys/check-data-keys.yaml
+            value: tasks/managed/check-data-keys/check-data-keys.yaml
         resolver: git
       workspaces:
         - name: data
@@ -142,7 +142,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/reduce-snapshot/reduce-snapshot.yaml
+            value: tasks/managed/reduce-snapshot/reduce-snapshot.yaml
       params:
         - name: SNAPSHOT
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
@@ -201,7 +201,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/extract-binaries-from-image/extract-binaries-from-image.yaml
+            value: tasks/managed/extract-binaries-from-image/extract-binaries-from-image.yaml
       params:
         - name: subdirectory
           value: $(context.pipelineRun.uid)
@@ -223,7 +223,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/sign-binaries/sign-binaries.yaml
+            value: tasks/managed/sign-binaries/sign-binaries.yaml
       params:
         - name: quayURL
           value: 'quay.io/konflux-artifacts'
@@ -261,7 +261,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/prepare-exodus-params/prepare-exodus-params.yaml
+            value: tasks/managed/prepare-exodus-params/prepare-exodus-params.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -279,7 +279,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/push-to-cdn/push-to-cdn.yaml
+            value: tasks/managed/push-to-cdn/push-to-cdn.yaml
       params:
         - name: exodusGwUrl
           value: $(tasks.prepare-exodus-params.results.exodusGwUrl)
@@ -305,7 +305,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/publish-to-cgw/publish-to-cgw.yaml
+            value: tasks/managed/publish-to-cgw/publish-to-cgw.yaml
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -323,7 +323,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/cleanup-workspace/cleanup-workspace.yaml
+            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
       when:
         - input: $(params.postCleanUp)
           operator: in
