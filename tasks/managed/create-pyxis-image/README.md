@@ -19,6 +19,10 @@ The relative path of the pyxis.json file in the data workspace is output as a ta
 | snapshotPath | Path to the JSON string of the mapped Snapshot spec in the data workspace                                                                                                                                                                                                                                                                                                                                   | No       | -             |
 | dataPath     | Path to the JSON string of the merged data to use in the data workspace                                                                                                                                                                                                                                                                                                                                     | No       |               |
 
+## Changes in 3.6.0
+* Bumped the utils image used in this task
+  * The updated image contains changes in create_container_image python script to enable the use case of updating tags when releasing the same image again
+
 ## Changes in 3.5.0
 * Added mandatory `dataPath` task parameter
   * The data file can now contain `.pyxis.skipLayers` flag. If true, image layer information
