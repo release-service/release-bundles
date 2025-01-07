@@ -62,7 +62,8 @@ jobs:
         # Migrating to the konflux-ci org
         with:
           fail-on-findings: true
-          find-copies-harder: true
+          find-copies: false
+          find-renames: false
   check-jsonschema:
     name: Validate json schema file
     runs-on: ubuntu-latest
