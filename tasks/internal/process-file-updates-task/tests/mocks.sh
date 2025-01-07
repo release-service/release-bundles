@@ -28,11 +28,33 @@ function git() {
   if [[ "$*" == "config"* ]]; then
     /usr/bin/git "$@"
   fi
+  if [[ "$*" == "diff"* ]]; then
+    /usr/bin/git "$@"
+  fi
 }
 
 function glab() {
   if [[ "$*" == *"mr create"* ]]; then
     gitRepo=$(echo "$*" | cut -f5 -d/ | cut -f1 -d.)
     echo "/merge_request/1"
+  elif [[ "$*" == *"mr list"* ]]; then
+    echo '!1'
+  elif [[ "$*" == *"mr diff"* ]]; then
+    gitRepo=$(echo "$*" | cut -f5 -d/ | cut -f1 -d.)
+    if [[ "${gitRepo}" == "replace-idempotent" ]]; then
+      echo "diff --git a/addons/my-addon2.yaml b/addons/my-addon2.yaml
+--- a/addons/my-addon2.yaml
++++ b/addons/my-addon2.yaml
+@@ -1,2 +1,2 @@
+-indexImage:
++indexImage: Jack
+"
+    else
+      echo "diff --git a/test/one-update.yaml b/test/one-update.yaml
++++ b/test/one-update.yaml
+@@ -1,2 +1,2 @@
++indexImage: Jack
+"
+    fi
   fi
 }
