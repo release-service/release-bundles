@@ -136,6 +136,10 @@ function skopeo() {
     fi
   fi
 }
+function mktemp() {
+  echo "temp_key_file"
+}
+
 function cosign () {
   # check if call should end successfully
   # mock_cosign_success_calls file is expected to contain lines with "1" or "0" where

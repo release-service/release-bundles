@@ -122,7 +122,8 @@ spec:
           else
               COSIGN_REKOR_ARGS="--insecure-ignore-tlog=true"
           fi
-          verify_output=$(run_cosign verify "$COSIGN_REKOR_ARGS" "$reference")
+          # shellcheck disable=SC2086
+          verify_output=$(run_cosign verify $COSIGN_REKOR_ARGS --key "$PUBLIC_KEY_FILE" "$reference")
           found_signatures=$(echo "$verify_output" | jq -j '['\
         '.[]|select(.critical.image."docker-manifest-digest"| contains("'"$digest"'"))'\
         '|select(.critical.identity."docker-reference"| contains("'"$identity"'"))'\
@@ -147,7 +148,8 @@ spec:
           fi
 
           if [ "$found_signatures" -eq 0 ]; then
-            run_cosign -t 3m0s sign "$COSIGN_REKOR_ARGS" \
+            # shellcheck disable=SC2086
+            run_cosign -t 3m0s sign $COSIGN_REKOR_ARGS \
               --key "$SIGN_KEY" \
               --sign-container-identity "$identity" "$reference@$digest"
           else
