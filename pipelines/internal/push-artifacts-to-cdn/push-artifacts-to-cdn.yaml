@@ -41,7 +41,25 @@ spec:
     - name: taskGitRevision
       description: The revision in the taskGitUrl repo to be used
       type: string
+  workspaces:
+    - name: pipeline
   tasks:
+    - name: pull-artifacts
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/pull-artifacts/pull-artifacts.yaml
+      params:
+        - name: snapshot_json
+          value: $(params.snapshot_json)
+      workspaces:
+        - name: data
+          workspace: pipeline
     - name: push-artifacts-to-cdn-task
       timeout: "24h00m0s"
       taskRef:
@@ -68,6 +86,11 @@ spec:
           value: $(params.cgwHostname)
         - name: cgwSecret
           value: $(params.cgwSecret)
+      workspaces:
+        - name: data
+          workspace: pipeline
+      runAfter:
+        - pull-artifacts
   results:
     - name: result
       value: $(tasks.push-artifacts-to-cdn-task.results.result)

@@ -15,10 +15,6 @@ spec:
     - name: snapshot_json
       type: string
       description: String containing a JSON representation of the snapshot spec
-    - name: concurrentLimit
-      type: string
-      description: The maximum number of images to be pulled at once
-      default: 3
     - name: exodusGwSecret
       type: string
       description: Env specific secret containing the Exodus Gateway configs
@@ -40,8 +36,11 @@ spec:
   results:
     - name: result
       description: Success if the task succeeds, the error otherwise
+  workspaces:
+    - name: data
+      description: The workspace where pulled binaries are stored
   steps:
-    - name: pull-and-push-images
+    - name: push-images
       image: quay.io/konflux-ci/release-service-utils:7835e32b1974f956a6c942e24adbc79705cab12e
       env:
         - name: EXODUS_CERT
@@ -155,45 +154,8 @@ spec:
         echo "$DOCKER_CONFIG_JSON" | sed -r 's/(^|\})[^{}]+(\{|$)/\1\2/g' > ~/.docker/config.json
         set -x
 
-        DISK_IMAGE_DIR="$(mktemp -d)"
+        DISK_IMAGE_DIR="$(workspaces.data.path)/artifacts"
         export DISK_IMAGE_DIR
-
-        process_component() { # Expected argument is [component json]
-            COMPONENT=$1
-            PULLSPEC=$(jq -er '.containerImage' <<< "${COMPONENT}")
-            DESTINATION="${DISK_IMAGE_DIR}/$(jq -er '.staged.destination' <<< "${COMPONENT}")/FILES" \
-              || (echo "Missing staged.destination value for component. This should be an existing pulp repo. \
-                  Failing" && exit 1)
-            mkdir -p "${DESTINATION}"
-            DOWNLOAD_DIR=$(mktemp -d)
-            cd "$DOWNLOAD_DIR"
-            # oras has very limited support for selecting the right auth entry,
-            # so create a custom auth file with just one entry
-            AUTH_FILE=$(mktemp)
-            select-oci-auth "${PULLSPEC}" > "$AUTH_FILE"
-            oras pull --registry-config "$AUTH_FILE" "$PULLSPEC"
-            NUM_MAPPED_FILES=$(jq '.staged.files | length' <<< "${COMPONENT}")
-            for ((i = 0; i < NUM_MAPPED_FILES; i++)) ; do
-                FILE=$(jq -c --arg i "$i" '.staged.files[$i|tonumber]' <<< "$COMPONENT")
-                SOURCE=$(jq -er '.source' <<< "$FILE")
-                FILENAME=$(jq -er '.filename' <<< "$FILE")
-                # The .qcow2 images are not zipped
-                if [ -f "${SOURCE}.gz" ] ; then
-                    gzip -d "${SOURCE}.gz"
-                fi
-                DESTINATION_FILE="${DESTINATION}/${FILENAME}"
-                # Albeit a rare one, this is a race condition since this is run in parallel.
-                # The race condition is if two files have the same $DESTINATION_FILE and both
-                # if checks are run before either mv is run a few lines below.
-                if [ -f "${DESTINATION_FILE}" ] ; then
-                    echo -n "Multiple files use the same destination value: $DESTINATION" >&2
-                    echo " and filename value: $FILENAME. Failing..." >&2
-                    exit 1
-                fi
-                mv "$SOURCE" "${DESTINATION_FILE}" || echo "didn't find mapped file: ${SOURCE}"
-            done
-
-        }
 
         process_component_for_developer_portal() { # Expected argument are [component json], [content_directory]
           COMPONENT=$1
@@ -230,30 +192,12 @@ spec:
 
         }
 
-        RUNNING_JOBS="\j" # Bash parameter for number of jobs currently running
-        NUM_COMPONENTS=$(jq '.components | length' <<< "$SNAPSHOT_JSON")
-
         # use the 1st component's version
         VERSION=$(jq -cr '.components[0].staged.version // ""' <<< "$SNAPSHOT_JSON")
         if [ "${VERSION}" == "" ] ; then
           echo "Error: version not specified in .components[0].staged.version. Needed to publish to customer portal"
           exit 1
         fi
-
-        # Process each component in parallel
-        for ((i = 0; i < NUM_COMPONENTS; i++)) ; do
-            COMPONENT=$(jq -c --arg i "$i" '.components[$i|tonumber]' <<< "$SNAPSHOT_JSON")
-            # Limit batch size to concurrent limit
-            while (( ${RUNNING_JOBS@P} >= $(params.concurrentLimit) )); do
-                wait -n
-            done
-            process_component "$COMPONENT" 2> "$STDERR_FILE" &
-        done
-
-        # Wait for remaining processes to finish
-        while (( ${RUNNING_JOBS@P} > 0 )); do
-            wait -n
-        done
 
         # Change to the subdir with the images
         cd "${DISK_IMAGE_DIR}"
@@ -266,7 +210,7 @@ spec:
         while IFS= read -r -d '' file ; do
             STAGED_JSON=$(jq --arg filename "$(basename "$file")" --arg path "$file" \
               --arg version "$VERSION" \
-              '.payload.files[.payload.files | length] = 
+              '.payload.files[.payload.files | length] =
               {"filename": $filename, "relative_path": $path, "version": $version}' <<< "$STAGED_JSON")
         done < <(find * -type f -print0)
 
@@ -283,6 +227,8 @@ spec:
           parent_dir=$(dirname "$path")
           component_destinations+=("${DISK_IMAGE_DIR}/$parent_dir")
         done
+
+        NUM_COMPONENTS=$(jq '.components | length' <<< "$SNAPSHOT_JSON")
 
         ## Process Files for Developer Portal / CGW
         ##
