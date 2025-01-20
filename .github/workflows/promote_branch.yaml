@@ -3,14 +3,14 @@ name: Promote branch
 on:
   workflow_dispatch:
     inputs:
-      target-branch:
-        description: The name of the branch to be promoted
+      branches:
+        description: Which branch is being promoted where
         type: choice
         required: true
-        default: staging
+        default: development-to-staging
         options:
-          - staging
-          - production
+          - development-to-staging
+          - staging-to-production
       force-to-staging:
         description: |
           Force to staging: Allow promotion to staging even if staging and production differ
@@ -39,10 +39,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Run branch promotion script
         run: |
-          .github/scripts/promote_branch.sh --target-branch $TARGET --force-to-staging $FORCE \
+          .github/scripts/promote_branch.sh --branches $BRANCHES --force-to-staging $FORCE \
             --override $OVERRIDE --dry-run $DRY
         env:
-          TARGET: ${{ inputs.target-branch }}
+          BRANCHES: ${{ inputs.branches }}
           FORCE: ${{ inputs.force-to-staging }}
           OVERRIDE: ${{ inputs.override }}
           DRY: ${{ inputs.dry-run }}

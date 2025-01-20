@@ -25,12 +25,12 @@ set -e
 ORG="konflux-ci"
 REPO="release-service-catalog"
 
-OPTIONS=$(getopt --long "target-branch:,force-to-staging:,override:,dry-run:,help" -o "tgt:,h" -- "$@")
+OPTIONS=$(getopt --long "branches:,force-to-staging:,override:,dry-run:,help" -o "b:,h" -- "$@")
 eval set -- "$OPTIONS"
 while true; do
     case "$1" in
-        -tgt|--target-branch)
-            TARGET_BRANCH="$2"
+        -b|--branches)
+            BRANCHES="$2"
             shift 2
             ;;
         --force-to-staging)
@@ -58,10 +58,10 @@ while true; do
 done
 
 print_help(){
-    echo "Usage: $0 --target-branch branch [--force-to-staging false] [--override false] [--dry-run false]"
+    echo "Usage: $0 --branches branch1-to-branch2 [--force-to-staging false] [--override false] [--dry-run false]"
     echo
-    echo "  --target-branch:    The name of the branch to be promoted. Options are staging"
-    echo "                      and production."
+    echo "  --branches:         Which branch is being promoted where. Either development-to-staging"
+    echo "                      or staging-to-production."
     echo "  --force-to-staging: If passed with value true, allow promotion to staging even"
     echo "                      if staging and production differ."
     echo "  --override:         If passed with value true, allow promotion to production"
@@ -69,7 +69,7 @@ print_help(){
     echo "  --dry-run:          If passed with value true, print out the changes that would"
     echo "                      be promoted but do not git push or delete the temp repo."
     echo
-    echo "  --target-branch has to be specified."
+    echo "  --branches has to be specified."
 }
 
 check_if_branch_differs() {
@@ -90,18 +90,20 @@ check_if_any_commits_in_last_week() {
     fi
 }
 
-if [ -z "${TARGET_BRANCH}" ]; then
-    echo -e "Error: missing 'target-branch' argument\n"
+if [ -z "${BRANCHES}" ]; then
+    echo -e "Error: missing '--branches' argument\n"
     print_help
     exit 1
 fi
-if [ "${TARGET_BRANCH}" == "staging" ]; then
-    SOURCE_BRANCH="development"
-elif [ "${TARGET_BRANCH}" == "production" ]; then
-    SOURCE_BRANCH="staging"
-    SRE_DUPLICATE_BRANCH="stable"
+if [ "${BRANCHES}" == development-to-staging ]; then
+    SOURCE_BRANCH=development
+    TARGET_BRANCH=staging
+elif [ "${BRANCHES}" == staging-to-production ]; then
+    SOURCE_BRANCH=staging
+    TARGET_BRANCH=production
+    SRE_DUPLICATE_BRANCH=stable
 else
-    echo "Invalid target-branch. Only 'staging' and 'production' are allowed"
+    echo "Invalid branches. Only 'development-to-staging' and 'staging-to-production' are allowed"
     print_help
     exit 1
 fi
