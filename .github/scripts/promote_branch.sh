@@ -25,12 +25,12 @@ set -e
 ORG="konflux-ci"
 REPO="release-service-catalog"
 
-OPTIONS=$(getopt --long "branches:,force-to-staging:,override:,dry-run:,help" -o "b:,h" -- "$@")
+OPTIONS=$(getopt --long "promotion-type:,force-to-staging:,override:,dry-run:,help" -o "p:,h" -- "$@")
 eval set -- "$OPTIONS"
 while true; do
     case "$1" in
-        -b|--branches)
-            BRANCHES="$2"
+        -p|--promotion-type)
+            PROMOTION_TYPE="$2"
             shift 2
             ;;
         --force-to-staging)
@@ -60,7 +60,7 @@ done
 print_help(){
     echo "Usage: $0 --branches branch1-to-branch2 [--force-to-staging false] [--override false] [--dry-run false]"
     echo
-    echo "  --branches:         Which branch is being promoted where. Either development-to-staging"
+    echo "  --promotion-type:   The type of promotion to perform. Either development-to-staging"
     echo "                      or staging-to-production."
     echo "  --force-to-staging: If passed with value true, allow promotion to staging even"
     echo "                      if staging and production differ."
@@ -69,7 +69,7 @@ print_help(){
     echo "  --dry-run:          If passed with value true, print out the changes that would"
     echo "                      be promoted but do not git push or delete the temp repo."
     echo
-    echo "  --branches has to be specified."
+    echo "  --promotion-type has to be specified."
 }
 
 check_if_branch_differs() {
@@ -90,20 +90,20 @@ check_if_any_commits_in_last_week() {
     fi
 }
 
-if [ -z "${BRANCHES}" ]; then
-    echo -e "Error: missing '--branches' argument\n"
+if [ -z "${PROMOTION_TYPE}" ]; then
+    echo -e "Error: missing '--promotion-type' argument\n"
     print_help
     exit 1
 fi
-if [ "${BRANCHES}" == development-to-staging ]; then
+if [ "${PROMOTION_TYPE}" == development-to-staging ]; then
     SOURCE_BRANCH=development
     TARGET_BRANCH=staging
-elif [ "${BRANCHES}" == staging-to-production ]; then
+elif [ "${PROMOTION_TYPE}" == staging-to-production ]; then
     SOURCE_BRANCH=staging
     TARGET_BRANCH=production
     SRE_DUPLICATE_BRANCH=stable
 else
-    echo "Invalid branches. Only 'development-to-staging' and 'staging-to-production' are allowed"
+    echo "Invalid promotion type. Only 'development-to-staging' and 'staging-to-production' are allowed"
     print_help
     exit 1
 fi
