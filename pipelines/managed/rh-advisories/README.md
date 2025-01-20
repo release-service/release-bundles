@@ -23,6 +23,9 @@ the rh-push-to-registry-redhat-io pipeline.
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                                              | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                                                     | No       | -                                                         |
 
+## Changes in 1.8.1
+* Set timeout for rh-sign-image-cosign task to be 6 hrs
+
 ## Changes in 1.8.0
 * Update all task pathInRepo values as they are now in `tasks/managed`
 
@@ -35,7 +38,7 @@ the rh-push-to-registry-redhat-io pipeline.
 * Add upload-component-sbom task to push the component-level SBOMs to Atlas.
 
 ## Changes in 1.6.0
-* Add new parameter `schema` to the `check-data-keys` task. 
+* Add new parameter `schema` to the `check-data-keys` task.
 * Add new systems pyxis,mapping & signing to the task.
 
 ## Changes in 1.5.7

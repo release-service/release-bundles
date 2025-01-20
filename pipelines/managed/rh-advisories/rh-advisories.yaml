@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.8.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -285,6 +285,7 @@ spec:
       runAfter:
         - collect-data
     - name: rh-sign-image-cosign
+      timeout: "6h00m0s"
       when:
         - input: $(tasks.collect-cosign-params.results.cosign-secret-name)
           operator: notin

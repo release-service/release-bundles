@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-push-to-registry-redhat-io
   labels:
-    app.kubernetes.io/version: "4.7.0"
+    app.kubernetes.io/version: "4.7.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -120,7 +120,7 @@ spec:
         - name: schema
           value: $(params.taskGitUrl)/raw/$(params.taskGitRevision)/schema/dataKeys.json
         - name: systems
-          value: 
+          value:
             - pyxis
             - mapping
             - sign
@@ -265,6 +265,7 @@ spec:
       runAfter:
         - collect-data
     - name: rh-sign-image-cosign
+      timeout: "6h00m0s"
       when:
         - input: $(tasks.collect-cosign-params.results.cosign-secret-name)
           operator: notin
