@@ -171,7 +171,7 @@ spec:
               expected_scp_windows_args="-i /root/.ssh/id_rsa -o UserKnownHostsFile=/root/.ssh/known_hosts "
               expected_scp_windows_args+="-P 22 /tmp/windows_signing_script_file.bat "
               expected_scp_windows_args+="windowsusername@windowsserver.com:"
-              expected_scp_windows_args+="C:/Users/Administrator/AppData/Local/Temp/windows_signing_script_file.bat"
+              expected_scp_windows_args+="C:/Users/windowsusername/AppData/Local/Temp/windows_signing_script_file.bat"
 
               if [[ "$scp_windows_args" == "$expected_scp_windows_args" ]]; then
                   echo "Test passed: Windows scp command called with correct arguments."
@@ -196,7 +196,7 @@ spec:
               expected_scp="-i /root/.ssh/id_rsa -o UserKnownHostsFile=/root/.ssh/known_hosts -P 22 \
               /tmp/windows_signing_script_file.bat \
               windowsusername@windowsserver.com:\
-              C:/Users/Administrator/AppData/Local/Temp/windows_signing_script_file.bat"
+              C:/Users/windowsusername/AppData/Local/Temp/windows_signing_script_file.bat"
 
               if [[ "$mock_scp_1" == "$expected_scp" ]]; then
                   echo "Test passed: First SCP command is correct."
@@ -210,7 +210,7 @@ spec:
               # check second scp command
               mock_scp_2=$(cat "$(workspaces.data.path)/mock_scp_2.txt")
               expected_scp_2="-i /root/.ssh/id_rsa -o UserKnownHostsFile=/root/.ssh/known_hosts -P 22 \
-              windowsusername@windowsserver.com:C:/Users/Administrator/AppData/Local/Temp/12345678/digest.txt \
+              windowsusername@windowsserver.com:C:/Users/windowsusername/AppData/Local/Temp/12345678/digest.txt \
               /tekton/results/signedWindowsDigest"
 
               if [[ "$mock_scp_2" == "$expected_scp_2" ]]; then

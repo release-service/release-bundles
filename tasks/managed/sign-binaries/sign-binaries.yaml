@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: sign-binaries
   labels:
-    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/version: "3.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -387,16 +387,16 @@ spec:
         set -x
         # shellcheck disable=SC2086
         scp $SCP_OPTS "$windows_signing_script_file" \
-        "${WINDOWS_USER}@${WINDOWS_HOST}:C:/Users/Administrator/AppData/Local/Temp/windows_signing_script_file.bat"
+        "${WINDOWS_USER}@${WINDOWS_HOST}:C:/Users/${WINDOWS_USER}/AppData/Local/Temp/windows_signing_script_file.bat"
 
         # Execute the script on the Windows host
-        # shellcheck disable=SC2086
-        ssh $SSH_OPTS "C:/Users/Administrator/AppData/Local/Temp/windows_signing_script_file.bat"
+        # shellcheck disable=SC2029,SC2086
+        ssh $SSH_OPTS "C:/Users/${WINDOWS_USER}/AppData/Local/Temp/windows_signing_script_file.bat"
 
         # disable shellcheck for escaping the pipelineRunUid as we want that evaluated on client side
         # shellcheck disable=SC2029,SC2086
         scp $SCP_OPTS "${WINDOWS_USER}@${WINDOWS_HOST}:\
-        C:/Users/Administrator/AppData/Local/Temp/$(params.pipelineRunUid)/digest.txt" \
+        C:/Users/${WINDOWS_USER}/AppData/Local/Temp/$(params.pipelineRunUid)/digest.txt" \
         "$(results.signedWindowsDigest.path)"
 
         # Remove trailing spaces, carriage returns, newlines
@@ -405,7 +405,8 @@ spec:
         # Clean up the windows host now that we are done
         # disable shellcheck for escaping the pipelineRunUid as we want that evaluated on client side
         # shellcheck disable=SC2029,SC2086
-        ssh $SSH_OPTS "rmdir /s /q C:\\Users\\Administrator\\AppData\\Local\\Temp\\$(params.pipelineRunUid)"
+        ssh $SSH_OPTS "Remove-Item -LiteralPath \
+        C:\\Users\\${WINDOWS_USER}\\AppData\\Local\\Temp\\$(params.pipelineRunUid) -Force -Recurse"
     - name: generate-checksums
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       volumeMounts:

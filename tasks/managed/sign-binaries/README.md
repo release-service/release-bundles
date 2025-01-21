@@ -2,7 +2,7 @@
 
 Tekton task to sign windows and mac binaries before they are pushed to the Red Hat Developer Portal
 
-If any help is needed with this task, please ping in [#clouddst](https://redhat.enterprise.slack.com/archives/C04QRCD4SQZ) slack channel. 
+If any help is needed with this task, please ping in [#clouddst](https://redhat.enterprise.slack.com/archives/C04QRCD4SQZ) slack channel.
 
 ## Parameters
 
@@ -24,6 +24,9 @@ If any help is needed with this task, please ping in [#clouddst](https://redhat.
 | contentDir | Path where the content to push is stored in the workspace | No | |
 | pipelineRunUid | Unique ID of the pipelineRun | No |  |
 
+
+## Changes in 3.0.0
+* Updates to work with the new Windows signing host on AWS
 
 ## Changes in 2.1.0
 * Added sign-mac-binaries step
