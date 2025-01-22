@@ -88,7 +88,7 @@ spec:
             exit 1
         fi
         PUBLIC_KEY_FILE=$(mktemp)
-        echo -n "$PUBLIC_KEY" > "$PUBLIC_KEY_FILE"
+        echo -n "${PUBLIC_KEY:?}" > "$PUBLIC_KEY_FILE"
 
         RUNNING_JOBS="\j" # Bash parameter for number of jobs currently running
 
@@ -123,13 +123,14 @@ spec:
           local identity=$1
           local reference=$2
           local digest=$3
+          declare -a COSIGN_REKOR_ARGS=()
           if [ -v REKOR_URL ]; then
-              COSIGN_REKOR_ARGS="--rekor-url=$REKOR_URL"
+              COSIGN_REKOR_ARGS+=("--rekor-url=$REKOR_URL")
               REKOR_PUBLIC_KEY_FILE=$(mktemp)
               echo -n "$REKOR_PUBLIC_KEY" > "$REKOR_PUBLIC_KEY_FILE"
               export SIGSTORE_REKOR_PUBLIC_KEY="$REKOR_PUBLIC_KEY_FILE"
           else
-              COSIGN_REKOR_ARGS="--insecure-ignore-tlog=true"
+              COSIGN_REKOR_ARGS+=("--insecure-ignore-tlog=true")
           fi
           verify_output=$(run_cosign verify "${COSIGN_REKOR_ARGS[@]}" --key "$PUBLIC_KEY_FILE" "$reference")
           found_signatures=$(echo "$verify_output" | jq -j '['\
@@ -141,21 +142,21 @@ spec:
         function check_and_sign() {
           local identity=$1
           local reference=$2
-          local tag=$3
-          local digest=$4
-          found_signatures=$(check_existing_signatures "$identity" "$reference:$tag" "$digest")
+          local digest=$3
+          declare -a COSIGN_REKOR_ARGS=()
+          found_signatures=$(check_existing_signatures "$identity" "$reference@$digest" "$digest")
           if [ -z "$found_signatures" ]; then
             found_signatures=0
           fi
           echopid "FOUND SIGNATURES for ${identity} ${digest}: $found_signatures"
 
           if [ -v REKOR_URL ]; then
-              COSIGN_REKOR_ARGS="-y --rekor-url=$REKOR_URL"
+              COSIGN_REKOR_ARGS+=("-y" "--rekor-url=$REKOR_URL")
               REKOR_PUBLIC_KEY_FILE=$(mktemp)
               echo -n "$REKOR_PUBLIC_KEY" > "$REKOR_PUBLIC_KEY_FILE"
               export SIGSTORE_REKOR_PUBLIC_KEY="$REKOR_PUBLIC_KEY_FILE"
           else
-              COSIGN_REKOR_ARGS="--tlog-upload=false"
+              COSIGN_REKOR_ARGS+=("--tlog-upload=false")
           fi
 
           if [ "$found_signatures" -eq 0 ]; then
@@ -167,6 +168,7 @@ spec:
           fi
         }
 
+        declare -a to_sign=()
         for (( COMPONENTS_INDEX=0; COMPONENTS_INDEX<COMPONENTS_LENGTH; COMPONENTS_INDEX++ )); do
             COMPONENT_NAME=$(jq -r ".components[${COMPONENTS_INDEX}].name" "${SNAPSHOT_PATH}")
             echo "Processing component ${COMPONENT_NAME}"
@@ -195,29 +197,59 @@ spec:
             if [ "$MEDIA_TYPE" = "application/vnd.docker.distribution.manifest.list.v2+json" ]; then LIST=1; fi
             if [ "$MEDIA_TYPE" = "application/vnd.oci.image.index.v1+json" ]; then LIST=1; fi
 
-            # Sign each manifest in manifest list
+            # Collect data for signing
+            # Sign each manifest in the manifest list
             if [ $LIST -eq 1 ]; then
                 for REGISTRY_REF in "${REGISTRY_REFERENCES[@]}"; do
                     for MDIGEST in $(echo "$IMAGE" | jq -r '.manifests[]|.digest'); do
                         for TAG in $TAGS; do
-                            while (( ${RUNNING_JOBS@P} >= $(params.concurrentLimit) )); do
-                                wait -n
-                            done
-                            check_and_sign "${REGISTRY_REF}:${TAG}" "${INTERNAL_CONTAINER_REF}" "${TAG}" "${MDIGEST}" &
+                            to_sign+=("${REGISTRY_REF}:${TAG}@${MDIGEST}#${INTERNAL_CONTAINER_REF}")
                         done
                     done
                 done
             fi
-
             # Sign manifest list itself or manifest if it's not list
             for REGISTRY_REF in "${REGISTRY_REFERENCES[@]}"; do
                 for TAG in $TAGS; do
-                    while (( ${RUNNING_JOBS@P} >= $(params.concurrentLimit) )); do
-                        wait -n
-                    done
-                    check_and_sign "${REGISTRY_REF}:${TAG}" "${INTERNAL_CONTAINER_REF}" "${TAG}" "${DIGEST}" &
+                    to_sign+=("${REGISTRY_REF}:${TAG}@${DIGEST}#${INTERNAL_CONTAINER_REF}")
                 done
             done
+        done
+        echo "${to_sign[@]}" | python3 -c "
+        import sys
+        from itertools import zip_longest
+        digest_groups = {}
+        # #
+        # Make groups based on reference + digest to avoid signing same digest in parallel
+        # #
+        for x in sys.stdin.read().strip().split(' '):
+          rest, internal_ref = x.split('#')
+          rest, digest = rest.split('@')
+          public_ref, tag = rest.split(':')
+          digest_groups.setdefault(internal_ref+'@'+digest, []).append(
+            (internal_ref, public_ref, digest, tag)
+          )
+        for to_yield in zip_longest(*digest_groups.values()):
+          for entry in filter(None, to_yield):
+            print(' '.join(entry))
+          print('---') # group separator
+        " | while read -r ENTRY; do
+          if [ "$ENTRY" = "---" ]; then
+            echo "... waiting for group to be signed ..."
+            # wait for group to finish
+            while (( ${RUNNING_JOBS@P} > 0 )); do
+              wait -n
+            done
+            continue
+          fi
+          INTERNAL_REF=$(echo "$ENTRY" | cut -d' ' -f1)
+          PUBLIC_REF=$(echo "$ENTRY" | cut -d' ' -f2)
+          DIGEST=$(echo "$ENTRY" | cut -d' ' -f3)
+          TAG=$(echo "$ENTRY" | cut -d' ' -f4)
+          while (( ${RUNNING_JOBS@P} >= $(params.concurrentLimit) )); do
+            wait -n
+          done
+          check_and_sign "${PUBLIC_REF}:${TAG}" "${INTERNAL_REF}" "${DIGEST}" &
         done
         while (( ${RUNNING_JOBS@P} > 0 )); do
             wait -n

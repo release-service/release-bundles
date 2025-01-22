@@ -37,10 +37,10 @@ spec:
               }
               EOF
               # create empty cosign verify mock files
-              REF1="quay.io/redhat-pending/test-product----test-image2:t1"
-              touch "$(workspaces.data.path)/$(echo $REF1 | tr '/' '-')"
-              REF2="quay.io/redhat-pending/test-product----test-image2:t2"
-              touch "$(workspaces.data.path)/$(echo $REF2 | tr '/' '-')"
+              for D in sha256:0000 sha256:1111 sha256:2222 ; do
+                REF="quay.io/redhat-pending/test-product----test-image2@${D}"
+                touch "$(workspaces.data.path)/$(echo $REF | tr '/' '-')"
+              done
 
               # first 8 cosign calls should end with success
               for _ in $(seq 1 8); do
@@ -111,10 +111,10 @@ spec:
               CALLS=$(cat "$(workspaces.data.path)/mock_cosign_verify_calls")
               COSIGN_COMMON="verify --insecure-ignore-tlog=true --key temp_key_file"
               EXPECTED=$(cat <<EOF
-              $COSIGN_COMMON ${_TEST_REPO}:t1
-              $COSIGN_COMMON ${_TEST_REPO}:t2
-              $COSIGN_COMMON ${_TEST_REPO}:t1
-              $COSIGN_COMMON ${_TEST_REPO}:t2
+              $COSIGN_COMMON ${_TEST_REPO}@sha256:2222
+              $COSIGN_COMMON ${_TEST_REPO}@sha256:2222
+              $COSIGN_COMMON ${_TEST_REPO}@sha256:2222
+              $COSIGN_COMMON ${_TEST_REPO}@sha256:2222
               EOF
               )
               echo "TESTING VERIFY CALLS"
