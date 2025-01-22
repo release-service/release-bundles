@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: sign-index-image
   labels:
-    app.kubernetes.io/version: "4.1.0"
+    app.kubernetes.io/version: "4.1.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -29,7 +29,7 @@ spec:
       description: Name of the user that requested the signing, for auditing purposes
     - name: requestTimeout
       type: string
-      default: "180"
+      default: "1800"
       description: InternalRequest timeout
     - name: pipelineRunUid
       type: string
@@ -101,7 +101,7 @@ spec:
           echo "- reference=${reference_image}"
           echo "- manifest_digest=${manifest_digest}"
           echo "- requester=$(params.requester)"
-  
+
           ${requestType} -r "${request}" \
             -p pipeline_image="${pipeline_image}" \
             -p reference="${reference_image}" \

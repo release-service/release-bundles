@@ -10,7 +10,7 @@ Task to create internalrequests or pipelineruns to sign snapshot components
 | dataPath                 | Path to the JSON string of the merged data to use in the data workspace                                                                                                                                                                           | No       | -             |
 | releasePlanAdmissionPath | Path to the JSON string of the releasePlanAdmission in the data workspace                                                                                                                                                                         | No       | -             |
 | requester                | Name of the user that requested the signing, for auditing purpose                                                                                                                                                                                 | No       | -             |
-| requestTimeout           | Request timeout                                                                                                                                                                                                                                   | Yes      | 180           |
+| requestTimeout           | Request timeout                                                                                                                                                                                                                                   | Yes      | 1800          |
 | concurrentLimit          | The maximum number of images to be processed at once                                                                                                                                                                                              | Yes      | 16            |
 | pipelineRunUid           | The uid of the current pipelineRun. Used as a label value when creating a requests                                                                                                                                                                | No       | -             |
 | taskGitUrl               | The url to the git repo where the release-service-catalog tasks to be used are stored                                                                                                                                                             | No       | -             |
@@ -19,6 +19,11 @@ Task to create internalrequests or pipelineruns to sign snapshot components
 | pyxisSecret              | The kubernetes secret to use to authenticate to Pyxis. It needs to contain two keys: key and cert                                                                                                                                                 | No       | -             |
 | signRegistryAccessPath   | The relative path in the workspace to a text file that contains a list of repositories that needs registry.access.redhat.com image references to be signed (i.e. requires_terms=true), one repository string per line, e.g. "rhtas/cosign-rhel9". | No       | -             |
 
+
+## Changes in 5.0.3
+* Increase `requestTimeout` value to 30 minutes
+  * The internal-request/internal-pipeline is set to a timeout of 30 minutes, but the internal-request/internal-pipeline script
+    was set to timeout after 3 minutes, which didn't make much sense.
 
 ## Changes in 5.0.2
 * fix linting issues

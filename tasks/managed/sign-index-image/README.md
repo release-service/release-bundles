@@ -7,11 +7,11 @@ Creates an InternalRequest to sign an index image
 | Name                     | Description                                                                               | Optional | Default value  |
 |--------------------------|-------------------------------------------------------------------------------------------|----------|----------------|
 | dataPath                 | Path to the JSON string of the merged data to use in the data workspace                   | No       | -              |
-| releasePlanAdmissionPath | Path to the JSON string of the releasePlanAdmission in the data workspace                 | No       | -              | 
+| releasePlanAdmissionPath | Path to the JSON string of the releasePlanAdmission in the data workspace                 | No       | -              |
 | referenceImage           | The image to be signed                                                                    | No       | -              |
 | manifestListDigests      | The manifest digests for each arch in manifest list                                       | No       | -              |
 | requester                | Name of the user that requested the signing, for auditing purposes                        | No       | -              |
-| requestTimeout           | InternalRequest timeout                                                                   | Yes      | 180            |
+| requestTimeout           | InternalRequest timeout                                                                   | Yes      | 1800           |
 | pipelineRunUid           | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -              |
 | taskGitUrl               | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -              |
 | taskGitRevision          | The revision in the taskGitUrl repo to be used                                            | No       | -              |
@@ -28,6 +28,11 @@ data:
         pipelineImage: <image pullspec>
         configMapName: <configmap name>
 ```
+
+## Changes in 4.1.1
+* Increase `requestTimeout` value to 30 minutes
+  * The internal-request/internal-pipeline is set to a timeout of 30 minutes, but the internal-request/internal-pipeline script
+    was set to timeout after 3 minutes, which didn't make much sense.
 
 ## Changes in 4.1.0
 * Updated task to support the `internal-pipelinerun` requestType
