@@ -14,3 +14,6 @@ Tekton task to push artifacts to CDN and optionally Dev Portal with optional sig
 | udcacheSecret   | Env specific secret containing the udcache credentials            | No       | -                                                        |
 | cgwHostname     | The hostname of the content-gateway to publish the metadata to    | Yes      | https://developers.redhat.com/content-gateway/rest/admin |
 | cgwSecret       | Env specific secret containing the content gateway credentials    | No       | -                                                        |
+
+## Changes in 0.1.0
+* Split out the extracting of the artifacts (via oras pull) to a separate step
