@@ -70,6 +70,11 @@ spec:
             secretKeyRef:
               name: $(params.secretName)
               key: PUBLIC_KEY
+        - name: REKOR_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: $(params.secretName)
+              key: REKOR_PUBLIC_KEY
       script: |
         #!/usr/bin/env bash
         set -eux
@@ -84,6 +89,7 @@ spec:
         fi
         PUBLIC_KEY_FILE=$(mktemp)
         echo -n "$PUBLIC_KEY" > "$PUBLIC_KEY_FILE"
+
         RUNNING_JOBS="\j" # Bash parameter for number of jobs currently running
 
         jobpid(){
@@ -119,11 +125,13 @@ spec:
           local digest=$3
           if [ -v REKOR_URL ]; then
               COSIGN_REKOR_ARGS="--rekor-url=$REKOR_URL"
+              REKOR_PUBLIC_KEY_FILE=$(mktemp)
+              echo -n "$REKOR_PUBLIC_KEY" > "$REKOR_PUBLIC_KEY_FILE"
+              export SIGSTORE_REKOR_PUBLIC_KEY="$REKOR_PUBLIC_KEY_FILE"
           else
               COSIGN_REKOR_ARGS="--insecure-ignore-tlog=true"
           fi
-          # shellcheck disable=SC2086
-          verify_output=$(run_cosign verify $COSIGN_REKOR_ARGS --key "$PUBLIC_KEY_FILE" "$reference")
+          verify_output=$(run_cosign verify "${COSIGN_REKOR_ARGS[@]}" --key "$PUBLIC_KEY_FILE" "$reference")
           found_signatures=$(echo "$verify_output" | jq -j '['\
         '.[]|select(.critical.image."docker-manifest-digest"| contains("'"$digest"'"))'\
         '|select(.critical.identity."docker-reference"| contains("'"$identity"'"))'\
@@ -143,13 +151,15 @@ spec:
 
           if [ -v REKOR_URL ]; then
               COSIGN_REKOR_ARGS="-y --rekor-url=$REKOR_URL"
+              REKOR_PUBLIC_KEY_FILE=$(mktemp)
+              echo -n "$REKOR_PUBLIC_KEY" > "$REKOR_PUBLIC_KEY_FILE"
+              export SIGSTORE_REKOR_PUBLIC_KEY="$REKOR_PUBLIC_KEY_FILE"
           else
               COSIGN_REKOR_ARGS="--tlog-upload=false"
           fi
 
           if [ "$found_signatures" -eq 0 ]; then
-            # shellcheck disable=SC2086
-            run_cosign -t 3m0s sign $COSIGN_REKOR_ARGS \
+            run_cosign -t 3m0s sign "${COSIGN_REKOR_ARGS[@]}" \
               --key "$SIGN_KEY" \
               --sign-container-identity "$identity" "$reference@$digest"
           else
