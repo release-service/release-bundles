@@ -59,10 +59,19 @@ jobs:
         if: |
           steps.changed-dirs.outputs.any_changed == 'true'
         uses: ./.github/actions/install-tkn
+      - name: Prepare docker config json
+        env:
+          TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON: ${{ secrets.TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON }}
+        run: |
+          echo $TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON > /tmp/.dockerconfig.json
+          echo "cat /tmp/.dockerconfig.json"
+          cat /tmp/.dockerconfig.json
       - name: Test Tekton tasks
         if: |
           steps.changed-dirs.outputs.any_changed == 'true'
         run: .github/scripts/test_tekton_tasks.sh
         env:
+          TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH: /tmp/.dockerconfig.json
+          TRUSTED_ARTIFACT_OCI_STORAGE: ${{ secrets.TRUSTED_ARTIFACT_OCI_STORAGE }}
           TEST_ITEMS: >-
             ${{ steps.changed-dirs.outputs.all_changed_files }}

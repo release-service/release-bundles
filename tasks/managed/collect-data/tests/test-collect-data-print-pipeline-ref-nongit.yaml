@@ -9,6 +9,10 @@ spec:
     git resolver
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -111,8 +115,8 @@ spec:
           value: default/releaseserviceconfig-sample
         - name: snapshot
           value: default/snapshot-sample
-        - name: subdirectory
-          value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
       workspaces:
@@ -122,6 +126,8 @@ spec:
       params:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
+        - name: SOURCE_DATA_ARTIFACT
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
       workspaces:
         - name: data
           workspace: tests-workspace
