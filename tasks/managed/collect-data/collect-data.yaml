@@ -28,13 +28,17 @@ spec:
     - name: snapshot
       type: string
       description: The namespaced name of the Snapshot
-    - name: subdirectory
-      description: Subdirectory inside the workspace to be used
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
       type: string
-      default: ""
+    - name: ociArtifactExpiresAfter
+      description: Expiration date for the trusted artifacts created in the
+        OCI repository. An empty string means the artifacts do not expire.
+      type: string
+      default: "1d"
   workspaces:
     - name: data
-      description: Workspace to save the CR jsons to
+      description: Workspace to save the CR jsons to (ws needs to be rw since it updates data files)
   results:
     - name: release
       type: string
@@ -72,6 +76,9 @@ spec:
     - name: releasePipelineMetadata
       type: string
       description: json object containing git resolver metadata about the running release pipeline
+    - description: Produced trusted data artifact
+      name: SOURCE_DATA_ARTIFACT
+      type: string
   steps:
     - name: collect-data
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
@@ -91,34 +98,29 @@ spec:
         set -eo pipefail
 
         RESULTS_DIR_PATH="results"
-        if [ -n "$(params.subdirectory)" ]; then
-          mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
-          RESULTS_DIR_PATH="$(params.subdirectory)/results"
-        fi
-
-        mkdir "$(workspaces.data.path)/$RESULTS_DIR_PATH"
+        mkdir -p "$(workspaces.data.path)/$RESULTS_DIR_PATH"
         echo -n "$RESULTS_DIR_PATH" > "$(results.resultsDir.path)"
 
-        RELEASE_PATH="$(params.subdirectory)/release.json"
+        RELEASE_PATH="release.json"
         echo -n "$RELEASE_PATH" > "$(results.release.path)"
         get-resource "release" "${RELEASE}" | tee "$(workspaces.data.path)/$RELEASE_PATH"
 
-        RELEASEPLAN_PATH="$(params.subdirectory)/release_plan.json"
+        RELEASEPLAN_PATH="release_plan.json"
         echo -n "$RELEASEPLAN_PATH" > "$(results.releasePlan.path)"
         get-resource "releaseplan" "${RELEASE_PLAN}" | tee "$(workspaces.data.path)/$RELEASEPLAN_PATH"
 
-        RELEASEPLANADMISSION_PATH="$(params.subdirectory)/release_plan_admission.json"
+        RELEASEPLANADMISSION_PATH="release_plan_admission.json"
         echo -n "$RELEASEPLANADMISSION_PATH" > "$(results.releasePlanAdmission.path)"
         get-resource "releaseplanadmission" "${RELEASE_PLAN_ADMISSION}" \
           | tee "$(workspaces.data.path)/$RELEASEPLANADMISSION_PATH"
 
-        RELEASESERVICECONFIG_PATH="$(params.subdirectory)/release_service_config.json"
+        RELEASESERVICECONFIG_PATH="release_service_config.json"
         echo -n "$RELEASESERVICECONFIG_PATH" > "$(results.releaseServiceConfig.path)"
         get-resource "releaseserviceconfig" "${RELEASE_SERVICE_CONFIG}" \
           | tee "$(workspaces.data.path)/$RELEASESERVICECONFIG_PATH"
 
         echo -e "\nFetching Snapshot Spec"
-        SNAPSHOTSPEC_PATH="$(params.subdirectory)/snapshot_spec.json"
+        SNAPSHOTSPEC_PATH="snapshot_spec.json"
         echo -n "$SNAPSHOTSPEC_PATH" > "$(results.snapshotSpec.path)"
         get-resource "snapshot" "${SNAPSHOT}" "{.spec}" | tee "$(workspaces.data.path)/$SNAPSHOTSPEC_PATH"
 
@@ -140,7 +142,7 @@ spec:
         # Merge now with ReleasePlanAdmission keys. ReleasePlanAdmission has higher priority
         merged_output=$(merge-json "$merged_output" "$release_plan_admission_result")
 
-        DATA_PATH="$(params.subdirectory)/data.json"
+        DATA_PATH="data.json"
         echo -n "$DATA_PATH" > "$(results.data.path)"
         echo "$merged_output" | tee "$(workspaces.data.path)/$DATA_PATH"
     - name: collect-single-component-mode-data
@@ -153,7 +155,7 @@ spec:
         set -ex
 
         # check if RP/RPA has a single-component mode
-        DATA_PATH="$(params.subdirectory)/data.json"
+        DATA_PATH="data.json"
         SINGLE_COMPONENT_MODE=$(jq -r '.singleComponentMode // "false"' "$(workspaces.data.path)/$DATA_PATH")
         SNAPSHOT_NAME=$(echo "${SNAPSHOT}" | cut -f2 -d/)
         SNAPSHOT_NAMESPACE=$(echo "${SNAPSHOT}" | cut -f1 -d/)
@@ -198,10 +200,10 @@ spec:
             done
         }
 
-        check_source "Release" "$(workspaces.data.path)/$(params.subdirectory)/release.json"
-        check_source "ReleasePlan" "$(workspaces.data.path)/$(params.subdirectory)/release_plan.json"
+        check_source "Release" "$(workspaces.data.path)/release.json"
+        check_source "ReleasePlan" "$(workspaces.data.path)/release_plan.json"
         check_source "ReleasePlanAdmission" \
-            "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json"
+            "$(workspaces.data.path)/release_plan_admission.json"
 
         exit $RC
     - name: print-pipeline-ref-info
@@ -211,7 +213,7 @@ spec:
         set -eu
 
         pipelineref=$(jq -c '.spec.pipeline.pipelineRef' \
-          "$(workspaces.data.path)/$(params.subdirectory)/release_plan_admission.json")
+          "$(workspaces.data.path)/release_plan_admission.json")
         resolver=$(jq -r '.resolver // ""' <<< "${pipelineref}")
         if [ "${resolver}" == "git" ] ; then
           url=$(jq -r '.params[] | select(.name=="url") | .value' <<< "${pipelineref}")
@@ -246,3 +248,18 @@ spec:
         echo "${json}" > "$(results.releasePipelineMetadata.path)"
         # pretty print for log message
         jq . <<< "$json"
+    - name: create-trusted-artifact
+      args:
+        - create
+        - --store
+        - $(params.ociStorage)
+        - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+      computeResources: {}
+      image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+      env:
+        - name: IMAGE_EXPIRES_AFTER
+          value: $(params.ociArtifactExpiresAfter)
+        - name: "DEBUG"
+          value: "1"
+        - name: "ORAS_OPTIONS"
+          value: "--insecure"

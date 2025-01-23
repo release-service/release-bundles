@@ -8,6 +8,10 @@ spec:
     Run the collect-data task and verify that data task result is accurate.
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -15,7 +19,7 @@ spec:
           - name: create-crs
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               cat > release << EOF
@@ -113,8 +117,8 @@ spec:
           value: default/releaseserviceconfig-with-data-sample
         - name: snapshot
           value: default/snapshot-with-data-sample
-        - name: subdirectory
-          value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
       workspaces:
@@ -126,6 +130,8 @@ spec:
           value: $(tasks.run-task.results.data)
         - name: singleComponentMode
           value: $(tasks.run-task.results.singleComponentMode)
+        - name: SOURCE_DATA_ARTIFACT
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -137,7 +143,20 @@ spec:
             type: string
           - name: singleComponentMode
             type: string
+          - name: SOURCE_DATA_ARTIFACT
+            type: string
         steps:
+          - name: use-trusted-artifact
+            args:
+              - use
+              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+            env:
+              - name: "DEBUG"
+                value: "1"
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+            computeResources: {}
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |

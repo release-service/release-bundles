@@ -33,6 +33,12 @@ jobs:
           steps.changed-dirs.outputs.any_changed == 'true'
         run: |
           kubectl cluster-info
+      - name: Deploy Local Kind Registry
+        timeout-minutes: 10
+        if: |
+          steps.changed-dirs.outputs.any_changed == 'true'
+        run: |
+          .github/scripts/deploy_registry.sh
       - name: Install Tekton
         timeout-minutes: 10
         if: |
@@ -64,5 +70,7 @@ jobs:
           steps.changed-dirs.outputs.any_changed == 'true'
         run: .github/scripts/test_tekton_tasks.sh
         env:
+          TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH: /tmp/.dockerconfig.json
+          TRUSTED_ARTIFACT_OCI_STORAGE: "registry-service.kind-registry/trusted-artifacts"
           TEST_ITEMS: >-
             ${{ steps.changed-dirs.outputs.all_changed_files }}
