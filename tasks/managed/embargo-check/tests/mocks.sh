@@ -23,11 +23,11 @@ function curl() {
 
 function internal-request() {
   if [[ "$*" == *"CVE-999"* ]]; then
-    echo "Name: embargo-ir"
+    echo "InternalRequest 'embargo-ir' created."
   elif [[ "$*" == *"CVE-FAIL-555"* ]]; then
     exit 1
   else
-    echo "Name: success-ir"
+    echo "InternalRequest 'success-ir' created."
   fi
 }
 

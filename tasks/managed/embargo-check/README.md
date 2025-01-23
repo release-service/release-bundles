@@ -15,6 +15,10 @@ by server using curl and checks the CVEs via an InternalRequest. If any issue or
 
 ## Changes in 0.5.0
 * Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
+* The pipeline is called via git resolver now instead of cluster resolver
+  * This was done by changing from `-r` to `--pipeline` in the `internal-request` call
+  * The base image was updated to include this new functionality
+* Updated logic to determine InternalRequest name more reliably
 
 ## Changes in 0.4.1
 * fix linting issues in embargo-check task 
