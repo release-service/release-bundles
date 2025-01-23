@@ -10,6 +10,11 @@ by server using curl and checks the CVEs via an InternalRequest. If any issue or
 | dataPath                 | Path to data JSON in the data workspace                                                   | No       | -             |
 | requestTimeout           | InternalRequest timeout                                                                   | Yes      | 180           |
 | pipelineRunUid           | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -             |
+| taskGitUrl               | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -             |
+| taskGitRevision          | The revision in the taskGitUrl repo to be used                                            | No       | -             |
+
+## Changes in 0.5.0
+* Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 
 ## Changes in 0.4.1
 * fix linting issues in embargo-check task 

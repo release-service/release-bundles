@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: embargo-check
   labels:
-    app.kubernetes.io/version: "0.4.1"
+    app.kubernetes.io/version: "0.5.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -24,6 +24,12 @@ spec:
     - name: pipelineRunUid
       type: string
       description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   workspaces:
     - name: data
       description: The workspace where the snapshot spec json file resides
@@ -97,6 +103,8 @@ spec:
 
         internal-request -r "check-embargoed-cves" \
             -p cves="${CVES}" \
+            -p taskGitUrl="$(params.taskGitUrl)" \
+            -p taskGitRevision="$(params.taskGitRevision)" \
             -l ${PIPELINERUN_LABEL}="$(params.pipelineRunUid)" \
             -t "$(params.requestTimeout)" \
             -s true \

@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: check-embargoed-cves
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -16,10 +16,24 @@ spec:
       type: string
       description: |
           String containing a space separated list of CVEs to check (e.g. 'CVE-123 CVE-234 CVE-345')
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   tasks:
     - name: check-embargoed-cves-task
       taskRef:
-        name: check-embargoed-cves-task
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/check-embargoed-cves-task/check-embargoed-cves-task.yaml
       params:
         - name: cves
           value: $(params.cves)
