@@ -19,6 +19,9 @@ Tekton pipeline to release Red Hat Snapshots to an external registry. This pipel
 | taskGitUrl              | The url to the git repo where the release-service-catalog tasks to be used are stored | Yes      | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision         | The revision in the taskGitUrl repo to be used                                       | No        | -            |
 
+## Changes in 5.5.1
+* Pass taskGitUrl and taskGitRevision to run-file-updates task
+
 ## Changes in 5.5.0
 * Update all task pathInRepo values as they are now in `tasks/managed`
 

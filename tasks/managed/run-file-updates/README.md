@@ -14,6 +14,11 @@ the field `spec.data.fileUpdates` in the ReleasePlanAdmission resource.
 | synchronously      | Whether the task should wait for InternalRequests to complete                             | Yes      | true                     |
 | pipelineRunUid     | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                        |
 | resultsDirPath     | Path to results directory in the data workspace                                           | No       | -                        |
+| taskGitUrl         | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -                        |
+| taskGitRevision    | The revision in the taskGitUrl repo to be used                                            | No       | -                        |
+
+## Changes in 3.0.0
+* Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 
 ## Changes in 2.0.2
 * fix linting issues

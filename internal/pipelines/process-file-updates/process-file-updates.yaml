@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: process-file-updates
   labels:
-    app.kubernetes.io/version: "0.0.2"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -33,12 +33,26 @@ spec:
       type: string
       default: "file-updates-secret"
       description: The credentials used to update the git repo
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   workspaces:
     - name: pipeline
   tasks:
     - name: process-file-updates
       taskRef:
-        name: process-file-updates-task
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/process-file-updates-task/process-file-updates-task.yaml
       params:
         - name: upstream_repo
           value: $(params.upstream_repo)

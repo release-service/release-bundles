@@ -93,6 +93,10 @@ spec:
           value: ""
         - name: resultsDirPath
           value: results
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       runAfter:
         - setup
       workspaces:

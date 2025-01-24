@@ -89,6 +89,10 @@ spec:
           value: ""
         - name: resultsDirPath
           value: results
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       runAfter:
         - setup
       workspaces:
@@ -174,6 +178,18 @@ spec:
                 # Check if the 'ref' field matches
                 if [ "$(echo "$requestRepo" | jq -r '.spec.params.ref')" != "$ref" ]; then
                   echo "InternalRequest for repo: $repo has different 'ref'. Expected: $ref"
+                  exit 1
+                fi
+
+                # Check if the 'taskGitUrl' field matches
+                if [ "$(echo "$requestRepo" | jq -r '.spec.params.taskGitUrl')" != "http://localhost" ]; then
+                  echo "InternalRequest for repo: $repo has different 'taskGitUrl'. Expected: http://localhost"
+                  exit 1
+                fi
+
+                # Check if the 'taskGitRevision' field matches
+                if [ "$(echo "$requestRepo" | jq -r '.spec.params.taskGitRevision')" != "main" ]; then
+                  echo "InternalRequest for repo: $repo has different 'taskGitRevision'. Expected: main"
                   exit 1
                 fi
 

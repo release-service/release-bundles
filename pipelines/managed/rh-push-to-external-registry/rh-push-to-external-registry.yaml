@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-push-to-external-registry
   labels:
-    app.kubernetes.io/version: "5.5.0"
+    app.kubernetes.io/version: "5.5.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -370,6 +370,10 @@ spec:
           value: $(context.pipelineRun.uid)
         - name: resultsDirPath
           value: "$(tasks.collect-data.results.resultsDir)"
+        - name: taskGitUrl
+          value: $(params.taskGitUrl)
+        - name: taskGitRevision
+          value: $(params.taskGitRevision)
       runAfter:
         - push-rpm-data-to-pyxis
       taskRef:
