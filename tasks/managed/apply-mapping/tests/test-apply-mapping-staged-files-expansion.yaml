@@ -10,14 +10,21 @@ spec:
     contains the expected values with filenames expanded.
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       workspaces:
-        - name: config
+        - name: data
           workspace: tests-workspace
       taskSpec:
+        results:
+          - name: SOURCE_DATA_ARTIFACT
+            type: string
         workspaces:
-          - name: config
+          - name: data
         steps:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
@@ -25,7 +32,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > "$(workspaces.config.path)/test_data.json" << EOF
+              cat > "$(workspaces.data.path)/test_data.json" << EOF
               {
                 "mapping": {
                   "components": [
@@ -62,7 +69,7 @@ spec:
               }
               EOF
 
-              cat > "$(workspaces.config.path)/test_snapshot_spec.json" << EOF
+              cat > "$(workspaces.data.path)/test_snapshot_spec.json" << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -89,6 +96,19 @@ spec:
                 ]
               }
               EOF
+          - name: create-trusted-artifact
+            args:
+              - create
+              - --store
+              - $(params.ociStorage)
+              - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+            computeResources: { }
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+            env:
+              - name: IMAGE_EXPIRES_AFTER
+                value: 1d
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
     - name: run-task
       taskRef:
         name: apply-mapping
@@ -97,19 +117,40 @@ spec:
           value: test_snapshot_spec.json
         - name: dataPath
           value: test_data.json
+        - name: ociStorage
+          value: $(params.ociStorage)
+        - name: SOURCE_DATA_ARTIFACT
+          value: "$(tasks.setup.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
       runAfter:
         - setup
       workspaces:
-        - name: config
+        - name: data
           workspace: tests-workspace
     - name: check-result
       workspaces:
-        - name: config
+        - name: data
           workspace: tests-workspace
+      params:
+        - name: SOURCE_DATA_ARTIFACT
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
+      runAfter:
+        - run-task
       taskSpec:
         workspaces:
-          - name: config
+          - name: data
+        params:
+          - name: SOURCE_DATA_ARTIFACT
+            type: string
         steps:
+          - name: use-trusted-artifact
+            args:
+              - use
+              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+            env:
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+            computeResources: {}
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
@@ -119,13 +160,11 @@ spec:
               echo Test that comp1 has the proper files
               test "$(
                 jq -c '.components[] | select(.name=="comp1") | .staged.files' \
-                < "$(workspaces.config.path)/test_snapshot_spec.json"
+                < "$(workspaces.data.path)/test_snapshot_spec.json"
               )" == '[{"source":"one.qcow2","filename":"ai-testrevision"},{"source":"one.raw","filename":"ai-testrev"}]'
 
               echo Test that comp2 has the proper files
               test "$(
                 jq -c '.components[] | select(.name=="comp2") | .staged.files' \
-                < "$(workspaces.config.path)/test_snapshot_spec.json"
+                < "$(workspaces.data.path)/test_snapshot_spec.json"
               )" == '[{"source":"two.qcow2","filename":"ai-123456"}]'
-      runAfter:
-        - run-task

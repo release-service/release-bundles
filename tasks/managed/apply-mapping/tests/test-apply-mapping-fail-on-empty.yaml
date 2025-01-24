@@ -12,16 +12,21 @@ spec:
     and verify that the task fails as expected.
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       workspaces:
-        - name: config
+        - name: data
           workspace: tests-workspace
       taskSpec:
-        workspaces:
-          - name: config
         results:
-          - name: snapshot
+          - name: SOURCE_DATA_ARTIFACT
+            type: string
+        workspaces:
+          - name: data
         steps:
           - name: setup-values
             image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
@@ -29,7 +34,7 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              cat > "$(workspaces.config.path)/data.json" << EOF
+              cat > "$(workspaces.data.path)/test_data.json" << EOF
               {
                 "mapping": {
                   "components": [
@@ -46,7 +51,7 @@ spec:
               }
               EOF
 
-              cat > "$(workspaces.config.path)/snapshot_spec.json" << EOF
+              cat > "$(workspaces.data.path)/test_snapshot_spec.json" << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -67,6 +72,19 @@ spec:
                 ]
               }
               EOF
+          - name: create-trusted-artifact
+            args:
+              - create
+              - --store
+              - $(params.ociStorage)
+              - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+            computeResources: { }
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+            env:
+              - name: IMAGE_EXPIRES_AFTER
+                value: 1d
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
     - name: run-task
       taskRef:
         name: apply-mapping
@@ -77,8 +95,12 @@ spec:
           value: "data.json"
         - name: failOnEmptyResult
           value: "true"
+        - name: ociStorage
+          value: $(params.ociStorage)
+        - name: SOURCE_DATA_ARTIFACT
+          value: "$(tasks.setup.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
       workspaces:
-        - name: config
+        - name: data
           workspace: tests-workspace
       runAfter:
         - setup

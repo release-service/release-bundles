@@ -22,22 +22,44 @@ spec:
       type: string
       description: Fail the task if the resulting snapshot contains 0 components
       default: "false"
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
+    - name: ociArtifactExpiresAfter
+      description: Expiration date for the trusted artifacts created in the
+        OCI repository. An empty string means the artifacts do not expire.
+      type: string
+      default: "1d"
+    - name: SOURCE_DATA_ARTIFACT
+      type: string
   workspaces:
-    - name: config
+    - name: data
       description: The workspace where the extra config file containing the mapping and snapshot json reside
   results:
     - name: mapped
       type: string
       description: A true/false value depicting whether or not the snapshot was mapped.
+    - description: Produced trusted data artifact
+      name: SOURCE_DATA_ARTIFACT
+      type: string
   steps:
+    - name: use-trusted-artifact
+      args:
+        - use
+        - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+      env:
+        - name: "ORAS_OPTIONS"
+          value: "--insecure"
+      computeResources: {}
+      image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
     - name: apply-mapping
       image: quay.io/konflux-ci/release-service-utils:d320c36f3d707cd5bfe55fe783f70236c06cc2e5
       script: |
         #!/usr/bin/env bash
         set -eux
 
-        SNAPSHOT_SPEC_FILE="$(workspaces.config.path)/$(params.snapshotPath)"
-        DATA_FILE="$(workspaces.config.path)/$(params.dataPath)"
+        SNAPSHOT_SPEC_FILE="$(workspaces.data.path)/$(params.snapshotPath)"
+        DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
         SNAPSHOT_SPEC_FILE_ORIG="${SNAPSHOT_SPEC_FILE}.orig"
 
         if [ ! -f "${SNAPSHOT_SPEC_FILE}" ] ; then
@@ -353,3 +375,16 @@ spec:
               "${SNAPSHOT_SPEC_FILE}" > /tmp/temp && mv /tmp/temp "${SNAPSHOT_SPEC_FILE}"
             fi
         done
+    - name: create-trusted-artifact
+      args:
+        - create
+        - --store
+        - $(params.ociStorage)
+        - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+      computeResources: {}
+      image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+      env:
+        - name: IMAGE_EXPIRES_AFTER
+          value: $(params.ociArtifactExpiresAfter)
+        - name: "ORAS_OPTIONS"
+          value: "--insecure"
