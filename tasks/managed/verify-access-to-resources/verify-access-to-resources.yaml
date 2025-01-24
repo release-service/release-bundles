@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: verify-access-to-resources  
+  name: verify-access-to-resources
   labels:
     app.kubernetes.io/version: "0.3.1"
   annotations:
@@ -31,7 +31,10 @@ spec:
       description: Whether internal services are required
       type: string
       default: "false"
-  steps: 
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
+  steps:
     - name: verify-access-to-resources
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       script: |

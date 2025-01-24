@@ -8,6 +8,10 @@ spec:
     Run the verify-access-to-resources task and verifies access to resources.
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -78,6 +82,8 @@ spec:
           value: default/snapshot-sample
         - name: requireInternalServices
           value: "true"
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
   finally:
