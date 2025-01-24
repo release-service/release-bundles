@@ -102,7 +102,7 @@ spec:
               file_content=$(cat "$binaries_path/foo_SHA256SUMS.sig")
               if [ "$file_content" != "dummy-payload" ]
               then
-                echo "Payload is not correct"
+                echo "Payload is NOT correct"
                 exit 1
               fi
       runAfter:
