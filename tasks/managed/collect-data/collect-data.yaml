@@ -259,7 +259,5 @@ spec:
       env:
         - name: IMAGE_EXPIRES_AFTER
           value: $(params.ociArtifactExpiresAfter)
-        - name: "DEBUG"
-          value: "1"
         - name: "ORAS_OPTIONS"
           value: "--insecure"

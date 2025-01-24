@@ -54,8 +54,6 @@ spec:
             env:
               - name: IMAGE_EXPIRES_AFTER
                 value: 1d
-              - name: "DEBUG"
-                value: "1"
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
       workspaces:
@@ -105,8 +103,6 @@ spec:
               - use
               - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
             env:
-              - name: "DEBUG"
-                value: "1"
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
             computeResources: {}

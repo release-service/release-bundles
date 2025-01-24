@@ -151,8 +151,6 @@ spec:
               - use
               - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
             env:
-              - name: "DEBUG"
-                value: "1"
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
             computeResources: {}
