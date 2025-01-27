@@ -13,7 +13,7 @@ spec:
       taskSpec:
         steps:
           - name: create-crs
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/usr/bin/env sh
               set -eux
@@ -109,7 +109,7 @@ spec:
           - name: data
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/bin/bash
               set -ex
@@ -169,9 +169,10 @@ spec:
                   exit 1
                 fi
 
-                # Check if the 'request' field contains 'process-file-updates'
-                if [ "$(echo "$requestRepo" | jq -r '.spec.request' )" != "process-file-updates" ]; then
-                  echo "InternalRequest for repo: $repo doesn't contain 'process-file-updates' in 'request' field"
+                # Check if the 'pipelineRef' field contains the 'process-file-updates' pipeline
+                if [[ "$(echo "$requestRepo" | jq -r '.spec.pipeline.pipelineRef.params[2].value' )" \
+                  != "pipelines/internal/process-file-updates"* ]]; then
+                  echo "InternalRequest for repo: $repo doesn't contain 'process-file-updates' in 'pipeline' field"
                   exit 1
                 fi
 
@@ -208,7 +209,7 @@ spec:
 
               echo "All checks passed successfully."
           - name: delete-crs
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/usr/bin/env bash
               set -eux

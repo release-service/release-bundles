@@ -19,6 +19,9 @@ the field `spec.data.fileUpdates` in the ReleasePlanAdmission resource.
 
 ## Changes in 3.0.0
 * Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
+* The pipeline is called via git resolver now instead of cluster resolver
+  * This was done by changing from `-r` to `--pipeline` in the `internal-request` call
+  * The base image was updated to include this new functionality
 
 ## Changes in 2.0.2
 * fix linting issues

@@ -50,7 +50,7 @@ spec:
       description: Workspace where the file updates to apply are defined
   steps:
     - name: run-script
-      image: quay.io/konflux-ci/release-service-utils:7d0135b80a47cdaa225010ea1e2dff78d057c922
+      image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
       script: |
         #!/bin/bash
         #
@@ -93,7 +93,7 @@ spec:
 
           echo -en "  Creating InternalRequest to produce file-updates..."
           requestId="$(openssl rand -hex 12)"
-          internal-request -r "$(params.request)" \
+          internal-request --pipeline "$(params.request)" \
                            -p upstream_repo="${upstream_repo}" \
                            -p repo="${repo}" \
                            -p ref="${ref}" \
