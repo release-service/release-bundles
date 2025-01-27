@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: apply-mapping
   labels:
-    app.kubernetes.io/version: "1.9.0"
+    app.kubernetes.io/version: "1.9.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -141,17 +141,18 @@ spec:
                   if [[ "$var_name" == "incrementer" ]]; then
                       repo=$(jq -r '.repository' <<< "$component")
                       tag=$(increment_tag "$tag" "$repo")
-                  else
-                      replacement=$(substitute "$var_name" "$substitute_map" "$labels_map")
-                      if [ -z "$replacement" ]; then
-                          echo Error: Substitution variable unknown or empty: "$var_name" >&2
-                          exit 1
-                      fi
-                      # Shellcheck suggests ${var//find/replace}, but
-                      # that won't work here - we need to match arbitrary amount of spaces
-                      # shellcheck disable=SC2001
-                      tag="$(sed "s/{{ *$var_name *}}/$replacement/" <<< "$tag")"
+                      continue  # Skip substitution fallback for incrementer
                   fi
+
+                  replacement=$(substitute "$var_name" "$substitute_map" "$labels_map")
+                  if [ -z "$replacement" ]; then
+                      echo "Error: Substitution variable unknown or empty: $var_name" >&2
+                      exit 1
+                  fi
+                  # Shellcheck suggests ${var//find/replace}, but
+                  # that won't work here - we need to match arbitrary amount of spaces
+                  # shellcheck disable=SC2001
+                  tag="$(sed "s/{{ *$var_name *}}/$replacement/" <<< "$tag")"
                 done
 
                 # Sanity check of the resulting tag value
