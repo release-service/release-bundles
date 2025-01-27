@@ -43,15 +43,16 @@ spec:
                     containerImage: newimage2
               EOF
               kubectl apply -f snapshot
-              
-              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee "$(workspaces.data.path)/snapshot.json"
-              chmod 666 "$(workspaces.data.path)/snapshot.json"
+
+              mkdir -p "$(workspaces.data.path)/work"              
+              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee "$(workspaces.data.path)/work/snapshot.json"
+              chmod 666 "$(workspaces.data.path)/work/snapshot.json"
           - name: create-trusted-artifact
             args:
               - create
               - --store
               - $(params.ociStorage)
-              - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+              - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)/work
             computeResources: { }
             image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
             env:
@@ -67,7 +68,7 @@ spec:
         name: reduce-snapshot
       params:
         - name: SNAPSHOT
-          value: $(workspaces.data.path)/snapshot.json
+          value: $(workspaces.data.path)/work/snapshot.json
         - name: SINGLE_COMPONENT
           value: true
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE
@@ -75,11 +76,11 @@ spec:
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE_NS
           value: default
         - name: SNAPSHOT_PATH
-          value: $(workspaces.data.path)/snapshot.json
+          value: $(workspaces.data.path)/work/snapshot.json
         - name: ociStorage
           value: $(params.ociStorage)
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.setup.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
+          value: "$(tasks.setup.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
       runAfter:
         - setup
       workspaces:
@@ -91,7 +92,7 @@ spec:
           workspace: tests-workspace
       params:
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
       runAfter:
         - run-task
       taskSpec:
@@ -104,7 +105,7 @@ spec:
           - name: use-trusted-artifact
             args:
               - use
-              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work
             env:
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
@@ -116,12 +117,12 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              cat "$(workspaces.data.path)/snapshot.json"
-              if [ "$(jq '.components | length' < "$(workspaces.data.path)/snapshot.json")" -ne 1 ]; then
+              cat "$(workspaces.data.path)/work/snapshot.json"
+              if [ "$(jq '.components | length' < "$(workspaces.data.path)/work/snapshot.json")" -ne 1 ]; then
                 echo "ERROR: Resulting snapshot does not contain 1 component"
                 exit 1
               fi
-              if [ "$(jq -cr '.components[0].name' < "$(workspaces.data.path)/snapshot.json")" != "tom" ]; then
+              if [ "$(jq -cr '.components[0].name' < "$(workspaces.data.path)/work/snapshot.json")" != "tom" ]; then
                 echo "ERROR: Resulting snapshot does not contain the 'tom' component"
                 exit 1
               fi

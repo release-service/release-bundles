@@ -139,7 +139,7 @@ spec:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -175,7 +175,7 @@ spec:
           - name: use-trusted-artifact
             args:
               - use
-              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work
             env:
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
@@ -188,24 +188,24 @@ spec:
               set -eux
 
               echo Test that the results directory was created
-              test -d "$(workspaces.data.path)/$(params.resultsDir)"
+              test -d "$(workspaces.data.path)/work/$(params.resultsDir)"
 
               echo Test that Release CR was saved to workspace
-              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/$(params.release)")" == release-sample
+              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/work/$(params.release)")" == release-sample
 
               echo Test that ReleasePlan CR was saved to workspace
-              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/$(params.releasePlan)")" == releaseplan-sample
+              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/work/$(params.releasePlan)")" == releaseplan-sample
 
               echo Test that ReleasePlanAdmission CR was saved to workspace
-              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/$(params.releasePlanAdmission)")" == \
+              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/work/$(params.releasePlanAdmission)")" == \
                 releaseplanadmission-sample
 
               echo Test that ReleaseServiceConfig CR was saved to workspace
-              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/$(params.releaseServiceConfig)")" == \
+              test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/work/$(params.releaseServiceConfig)")" == \
                 releaseserviceconfig-sample
 
               echo Test that Snapshot spec was saved to workspace
-              test "$(jq -r '.application' < "$(workspaces.data.path)/$(params.snapshotSpec)")" == foo
+              test "$(jq -r '.application' < "$(workspaces.data.path)/work/$(params.snapshotSpec)")" == foo
 
               echo Test the fbcFragment result was properly set
               test "$(params.fbcFragment)" == "newimage"

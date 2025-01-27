@@ -131,7 +131,7 @@ spec:
         - name: singleComponentMode
           value: $(tasks.run-task.results.singleComponentMode)
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)"
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -149,7 +149,7 @@ spec:
           - name: use-trusted-artifact
             args:
               - use
-              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work
             env:
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
@@ -162,7 +162,7 @@ spec:
               set -eux
 
               echo Test that data result was set properly
-              test "$(cat "$(workspaces.data.path)/$(params.data)")" \
+              test "$(cat "$(workspaces.data.path)/work/$(params.data)")" \
                == '{"foo":"bar","rkey":"rvalue","one":{"four":["five","six"],"two":"three"},"singleComponentMode":true}'
               
               echo Test that the singleComponentMode result was properly set

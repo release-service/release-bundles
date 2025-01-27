@@ -46,13 +46,24 @@ spec:
     - name: data
       description: Workspace to save the CR jsons to
   steps:
+    - name: check-workspace
+      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      script: |
+        #!/usr/bin/env bash
+        set -x
+        ls -ld "$(workspaces.data.path)"
+        ls -lR "$(workspaces.data.path)"
     - name: use-trusted-artifact
       args:
         - use
-        - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)
+        - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work
       env:
         - name: "ORAS_OPTIONS"
           value: "--insecure"
+        - name: "HOME"
+          value: "/tekton/home"
+        - name: "DEBUG"
+          value: "1"
       computeResources: {}
       image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
     - name: reduce
@@ -75,7 +86,7 @@ spec:
         - create
         - --store
         - $(params.ociStorage)
-        - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)
+        - $(results.SOURCE_DATA_ARTIFACT.path)=$(workspaces.data.path)/work
       computeResources: {}
       image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
       env:
@@ -83,3 +94,5 @@ spec:
           value: $(params.ociArtifactExpiresAfter)
         - name: "ORAS_OPTIONS"
           value: "--insecure"
+        - name: "HOME"
+          value: "/tekton/home"

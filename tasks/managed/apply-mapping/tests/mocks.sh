@@ -4,7 +4,7 @@ set -eux
 # mocks to be injected into task step scripts
 
 function date() {
-  echo $* >> $(workspaces.data.path)/mock_date.txt
+  echo $* >> $(workspaces.data.path)/work/mock_date.txt
 
   case "$*" in
       *"2024-07-29T02:17:29 +%Y-%m-%d")
@@ -31,7 +31,7 @@ function date() {
 
 function skopeo() {
   echo Mock skopeo called with: $* >&2
-  echo $* >> $(workspaces.data.path)/mock_skopeo.txt
+  echo $* >> $(workspaces.data.path)/work/mock_skopeo.txt
 
   if [[ "$*" =~ list-tags\ docker://repo1 ]]; then
       echo '{"Tags": ["v2.0.0-4", "v2.0.0-3", "v2.0.0-2"]}'
