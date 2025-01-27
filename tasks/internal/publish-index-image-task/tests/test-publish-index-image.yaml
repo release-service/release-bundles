@@ -12,7 +12,7 @@ spec:
         name: publish-index-image-task
       params:
         - name: sourceIndex
-          value: "quay.io/source"
+          value: "quay.io/source@sha256:abcdef1234567890"
         - name: targetIndex
           value: "quay.io/target"
         - name: publishingCredentials

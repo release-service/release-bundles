@@ -15,7 +15,7 @@ spec:
         name: publish-index-image-task
       params:
         - name: sourceIndex
-          value: "registry-proxy.engineering.redhat.com/fail"
+          value: "registry-proxy.engineering.redhat.com/fail@sha256:0987654321fedcba"
         - name: targetIndex
           value: "quay.io/target"
         - name: publishingCredentials

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: publish-index-image-task
   labels:
-    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/version: "0.2.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -49,24 +49,53 @@ spec:
         quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
       script: |
         #!/usr/bin/env bash
+        set -euo pipefail
+
         PATH=/bin:/usr/bin:/usr/local/bin
         export PATH
 
-        # do not authenticate if the source is redhat's "registry-proxy" which is unauthenticated.
+        SOURCE_AUTH_ARGS=()
         if [[ ! "$(params.sourceIndex)" =~ ^registry-proxy(\-stage)?.engineering.redhat.com ]]; then
-            AUTH_PARAM=("--src-creds" "${SOURCE_INDEX_CREDENTIAL}")
+            SOURCE_AUTH_ARGS=("--src-creds" "${SOURCE_INDEX_CREDENTIAL}")
         fi
 
+        TARGET_AUTH_ARGS=("--dest-creds" "${TARGET_INDEX_CREDENTIAL}")
+
+        # Extract digest from pull spec
+        SOURCE_INDEX="$(params.sourceIndex)"
+        SOURCE_DIGEST="${SOURCE_INDEX##*@}"
+
+        echo "Getting target image digest: $(params.targetIndex)"
+        if TARGET_DIGEST=$(skopeo inspect \
+            "${TARGET_AUTH_ARGS[@]}" \
+            "docker://$(params.targetIndex)" \
+            --format '{{.Digest}}'); then
+            echo "Target image exists."
+            echo "DEBUG: Source Digest - $SOURCE_DIGEST"
+            echo "DEBUG: Target Digest - $TARGET_DIGEST"
+            if [ "$SOURCE_DIGEST" == "$TARGET_DIGEST" ]; then
+                echo "Image already exists with the same digest, skipping copy." | tee "$(results.requestMessage.path)"
+                exit 0
+            else
+                echo "Image exists in target registry but digests do not match." \
+                    "Proceeding to copy the image."
+            fi
+        else
+            echo "Target image does not exist. Proceeding to copy the image."
+        fi
+
+        # Proceed with copying the image
+        echo "Copying image from $(params.sourceIndex) to $(params.targetIndex)"
         (skopeo copy \
         --all \
         --preserve-digests \
         --retry-times "$(params.retries)" \
-        --src-tls-verify=false "${AUTH_PARAM[@]}" \
+        --src-tls-verify=false "${SOURCE_AUTH_ARGS[@]}" \
         "docker://$(params.sourceIndex)" \
-        --dest-creds "${TARGET_INDEX_CREDENTIAL}" \
+        "${TARGET_AUTH_ARGS[@]}" \
         "docker://$(params.targetIndex)" && \
         echo -n "Index Image Published successfully" || \
         echo -n "Failed publishing Index Image" ) | tee "$(results.requestMessage.path)"
 
-        # trick to get the proper exit status
+        # Ensure the script exits with the correct status
         grep "success" "$(results.requestMessage.path)" >/dev/null
