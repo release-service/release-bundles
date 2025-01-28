@@ -53,7 +53,7 @@ spec:
       description: The advisory url if one was created
   steps:
     - name: run-script
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
       script: |
         #!/bin/bash
         set -ex
@@ -165,7 +165,7 @@ spec:
         fi
 
         echo "Creating InternalRequest to create advisory..."
-        internal-request -r "$(params.request)" \
+        internal-request --pipeline "$(params.request)" \
                          -p application="${application}" \
                          -p origin="${origin}" \
                          -p advisory_json="${advisoryData}" \
@@ -179,7 +179,7 @@ spec:
                          > "$(workspaces.data.path)"/ir-result.txt || \
                          (grep "^\[" "$(workspaces.data.path)"/ir-result.txt | jq . && exit 1)
 
-        internalRequest=$(awk 'NR==1{ print $2 }' "$(workspaces.data.path)"/ir-result.txt | xargs)
+        internalRequest=$(awk -F"'" '/created/ { print $2 }' "$(workspaces.data.path)"/ir-result.txt)
         echo "done (${internalRequest})"
 
         echo -n "" > "$(results.advisory_url.path)"

@@ -15,9 +15,9 @@ spec:
       taskSpec:
         steps:
           - name: create-crs
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
               mkdir "$(workspaces.data.path)/results"

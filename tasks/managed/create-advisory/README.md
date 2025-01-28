@@ -22,6 +22,10 @@ Only all `redhat-pending` or all `redhat-prod` repositories may be specified in 
 
 ## Changes in 5.0.0
 * Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
+* The pipeline is called via git resolver now instead of cluster resolver
+  * This was done by changing from `-r` to `--pipeline` in the `internal-request` call
+  * The base image was updated to include this new functionality
+* Updated logic to determine InternalRequest name more reliably
 
 ## Changes in 4.4.3
 * Pass the errata service account secret name to the InternalRequest based on stage or prod
