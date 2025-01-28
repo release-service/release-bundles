@@ -100,6 +100,10 @@ spec:
           value: "false"
         - name: pipelineRunUid
           value: $(context.pipelineRun.uid)
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       runAfter:
         - setup
       workspaces:
@@ -166,6 +170,18 @@ spec:
               # Check the config_map_name parameter
               if [ "$(echo "$internalRequest" | jq -r '.spec.params.config_map_name' )" != "cm" ]; then
                 echo "InternalRequest has the wrong config_map_name parameter"
+                exit 1
+              fi
+
+              # Check the taskGitUrl parameter
+              if [ "$(echo "$internalRequest" | jq -r '.spec.params.taskGitUrl' )" != "http://localhost" ]; then
+                echo "InternalRequest has the wrong taskGitUrl parameter"
+                exit 1
+              fi
+
+              # Check the taskGitRevision parameter
+              if [ "$(echo "$internalRequest" | jq -r '.spec.params.taskGitRevision' )" != "main" ]; then
+                echo "InternalRequest has the wrong taskGitRevision parameter"
                 exit 1
               fi
 

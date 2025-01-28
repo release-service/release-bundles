@@ -102,6 +102,10 @@ spec:
           value: "false"
         - name: pipelineRunUid
           value: $(context.pipelineRun.uid)
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       runAfter:
         - setup
       workspaces:

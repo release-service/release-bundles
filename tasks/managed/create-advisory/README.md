@@ -17,6 +17,11 @@ Only all `redhat-pending` or all `redhat-prod` repositories may be specified in 
 | request                  | Type of request to be created                                                             | Yes      | create-advisory             |
 | synchronously            | Whether the task should wait for InternalRequests to complete                             | Yes      | true                        |
 | pipelineRunUid           | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                           |
+| taskGitUrl               | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -                           |
+| taskGitRevision          | The revision in the taskGitUrl repo to be used                                            | No       | -                           |
+
+## Changes in 5.0.0
+* Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 
 ## Changes in 4.4.3
 * Pass the errata service account secret name to the InternalRequest based on stage or prod

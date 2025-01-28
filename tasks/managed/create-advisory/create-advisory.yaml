@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-advisory
   labels:
-    app.kubernetes.io/version: "4.4.3"
+    app.kubernetes.io/version: "5.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -39,6 +39,12 @@ spec:
     - name: pipelineRunUid
       type: string
       description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   workspaces:
     - name: data
       description: Workspace where the json files are stored
@@ -166,6 +172,8 @@ spec:
                          -p config_map_name="${configMapName}" \
                          -p advisory_secret_name="${advisorySecretName}" \
                          -p errata_secret_name="${errataSecretName}" \
+                         -p taskGitUrl="$(params.taskGitUrl)" \
+                         -p taskGitRevision="$(params.taskGitRevision)" \
                          -s "$(params.synchronously)" \
                          -l ${pipelinerun_label}="$(params.pipelineRunUid)" \
                          > "$(workspaces.data.path)"/ir-result.txt || \

@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: create-advisory
   labels:
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: advisory
@@ -33,10 +33,24 @@ spec:
     - name: errata_secret_name
       type: string
       description: The name of the secret that contains the errata service account metadata
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   tasks:
     - name: create-advisory-task
       taskRef:
-        name: create-advisory-task
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/create-advisory-task/create-advisory-task.yaml
       params:
         - name: advisory_json
           value: $(params.advisory_json)
