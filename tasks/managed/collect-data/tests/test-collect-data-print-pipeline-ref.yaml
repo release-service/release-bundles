@@ -110,6 +110,8 @@ spec:
           value: default/releaseserviceconfig-sample
         - name: snapshot
           value: default/snapshot-sample
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
         - name: ociStorage
           value: $(params.ociStorage)
       runAfter:
@@ -122,7 +124,9 @@ spec:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.run-task.results.subdirectory)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -131,6 +135,8 @@ spec:
       taskSpec:
         params:
           - name: releasePipelineMetadata
+            type: string
+          - name: subdirectory
             type: string
           - name: SOURCE_DATA_ARTIFACT
             type: string

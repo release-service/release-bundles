@@ -88,6 +88,8 @@ spec:
           value: default/releaseserviceconfig-missing-cr-sample
         - name: snapshot
           value: default/snapshot-missing-cr-sample
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
         - name: ociStorage
           value: $(params.ociStorage)
       runAfter:

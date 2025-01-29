@@ -115,6 +115,8 @@ spec:
           value: default/releaseserviceconfig-sample
         - name: snapshot
           value: default/snapshot-sample
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
         - name: ociStorage
           value: $(params.ociStorage)
       runAfter:
@@ -127,7 +129,9 @@ spec:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
         - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
+          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.run-task.results.subdirectory)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -136,6 +140,8 @@ spec:
       taskSpec:
         params:
           - name: releasePipelineMetadata
+            type: string
+          - name: subdirectory
             type: string
         workspaces:
           - name: data
@@ -149,11 +155,11 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              mkdir -p "$(workspaces.data.path)/work"
-              touch "$(workspaces.data.path)/work/mock_curl.txt"
-              if [ "$(wc -l < "$(workspaces.data.path)/work/mock_curl.txt")" != 0 ]; then
+              mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
+              touch "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
+              if [ "$(wc -l < "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt")" != 0 ]; then
                 echo Error: curl was expected to be called 0 times. Actual calls:
-                cat "$(workspaces.data.path)/work/mock_curl.txt"
+                cat "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
                 exit 1
               fi
               

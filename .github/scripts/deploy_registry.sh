@@ -66,3 +66,10 @@ kubectl apply -k "${script_path}/../resources/cluster-issuer"
 deploy_registry
 port_forward
 prepare_docker_config
+
+echo ""
+echo "make sure you set these environment variables"
+echo ""
+echo "export TRUSTED_ARTIFACT_OCI_STORAGE=registry-service.kind-registry/trusted-artifacts"
+echo "export TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH=/tmp/.dockerconfig.json"
+echo ""
