@@ -46,13 +46,6 @@ spec:
     - name: data
       description: Workspace to save the CR jsons to
   steps:
-    - name: check-workspace
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
-      script: |
-        #!/usr/bin/env bash
-        set -x
-        ls -ld "$(workspaces.data.path)"
-        ls -lR "$(workspaces.data.path)"
     - name: use-trusted-artifact
       args:
         - use
