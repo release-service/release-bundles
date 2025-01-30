@@ -61,7 +61,7 @@ spec:
       description: The revision in the taskGitUrl repo to be used
     - name: ociStorage
       type: string
-      default: empty
+      default: "quay.io/scoheb/trusted-artifacts"
   workspaces:
     - name: release-workspace
   tasks:
@@ -132,7 +132,7 @@ spec:
             value: tasks/managed/reduce-snapshot/reduce-snapshot.yaml
       params:
         - name: SNAPSHOT
-          value: $(workspaces.data.path)/work/$(tasks.collect-data.results.snapshotSpec)
+          value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
         - name: SINGLE_COMPONENT
           value: $(tasks.collect-data.results.singleComponentMode)
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE
@@ -140,11 +140,13 @@ spec:
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE_NS
           value: $(tasks.collect-data.results.snapshotNamespace)
         - name: SNAPSHOT_PATH
-          value: $(workspaces.data.path)/work/$(tasks.collect-data.results.snapshotSpec)
+          value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
         - name: ociStorage
           value: $(params.ociStorage)
         - name: sourceDataArtifact
-          value: "$(tasks.collect-data.results.sourceDataArtifact)=$(workspaces.data.path)/work"
+          value: "$(tasks.collect-data.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace
@@ -192,13 +194,15 @@ spec:
         - name: failOnEmptyResult
           value: "true"
         - name: dataPath
-          value: "work/$(tasks.collect-data.results.data)"
+          value: "$(tasks.collect-data.results.data)"
         - name: snapshotPath
-          value: "work/$(tasks.collect-data.results.snapshotSpec)"
+          value: "$(tasks.collect-data.results.snapshotSpec)"
         - name: ociStorage
           value: $(params.ociStorage)
         - name: sourceDataArtifact
-          value: "$(tasks.reduce-snapshot.results.sourceDataArtifact)=$(workspaces.data.path)/work"
+          value: "$(tasks.reduce-snapshot.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace

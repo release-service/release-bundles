@@ -32,6 +32,10 @@ spec:
       default: "1d"
     - name: sourceDataArtifact
       type: string
+    - name: subdirectory
+      description: Subdirectory inside the workspace to be used
+      type: string
+      default: ""
   workspaces:
     - name: data
       description: The workspace where the extra config file containing the mapping and snapshot json reside
@@ -43,10 +47,20 @@ spec:
       name: sourceDataArtifact
       type: string
   steps:
+    - name: skip-trusted-artifact-operations
+      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      script: |
+        #!/usr/bin/env bash
+        set -eo pipefail
+
+        if [ "$(params.ociStorage)" == "empty" ]; then
+          echo "oci storage not detected via params.ociStorage ... skipping trusted artifacts tasks"
+          touch "$(workspaces.data.path)/$(params.subdirectory)/.skip-trusted-artifacts"
+        fi
     - name: use-trusted-artifact
       args:
         - use
-        - $(params.sourceDataArtifact)=$(workspaces.data.path)/work
+        - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
       env:
         - name: "ORAS_OPTIONS"
           value: "--insecure"
@@ -384,7 +398,7 @@ spec:
         - create
         - --store
         - $(params.ociStorage)
-        - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/work
+        - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/$(params.subdirectory)
       computeResources: {}
       image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
       env:
@@ -394,5 +408,14 @@ spec:
           value: "--insecure"
         - name: "HOME"
           value: "/tekton/home"
-        - name: "DEBUG"
-          value: "1"
+    - name: patch-source-data-artifact-result
+      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      script: |
+        #!/usr/bin/env bash
+        set -eu
+
+        # this is needed to skip trusted-artifacts tasks
+        # when using PVC based workspaces.
+        if [ "$(params.ociStorage)" == "empty" ]; then
+          echo -n "$(params.ociStorage)" > "$(results.sourceDataArtifact.path)"
+        fi
