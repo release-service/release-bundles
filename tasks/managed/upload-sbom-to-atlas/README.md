@@ -14,6 +14,9 @@ Supports both CycloneDX and SPDX format.
 | supportedCycloneDxVersion | If the SBOM uses a higher CycloneDX version, `syft convert` in the task will convert all SBOMs to this CycloneDX version before uploading them to Atlas. If the SBOM is already in this version or lower, it will be uploaded as is. | Yes      | 1.4                                                                           |
 | supportedSpdxVersion      | If the SBOM uses a higher SPDX version, `syft convert` in the task will convert all SBOMs to this SPDX version before uploading them to Atlas. If the SBOM is already in this version or lower, it will be uploaded as is.           | Yes      | 2.3                                                                           |
 
+## Changes in 0.2.1
+Ignore error (but output a message) if upload request to Atlas fails.
+
 ## Changes in 0.2.0
 Remove option to skip uploading SBOMs. Skipping will be handled via Tekton.
 Rename productSBOMPath parameter to sbomDir. Use SBOM file names as Atlas IDs.

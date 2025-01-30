@@ -1,0 +1,97 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-upload-sbom-to-atlas-curl-fail
+spec:
+  description: |
+    Tests that failure in uploading SPDX SBOMs to Atlas should not fail the upload-sbom-to-atlas task.
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        params:
+          - name: sbomDir
+            default: "sboms"
+            description: Directory containing generated SBOM files.
+            type: string
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:3eb493f6b7923e04fbb01b44b24e5491a2bbd1ec
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              # creating directory for generated SBOM-s
+              mkdir "$(workspaces.data.path)/$(params.sbomDir)"
+              # creating working directory
+              mkdir "$(workspaces.data.path)/workdir"
+
+              sbomsDir="$(workspaces.data.path)/$(params.sbomDir)"
+              workdir="$(workspaces.data.path)/workdir"
+
+              # minimal SPDX SBOM 2.3 - no need for conversion
+              cat > "$sbomsDir/spdx_minimal_curl_fail_2_3.json" << EOF
+              {
+                "spdxVersion": "SPDX-2.3",
+                "dataLicense": "CC0-1.0",
+                "SPDXID": "SPDXRef-DOCUMENT",
+                "name": "Minimal SPDX SBOM for testing curl failure",
+                "documentNamespace": "http://spdx.org/spdxdocs/minimal-spdx-sbom",
+                "documentDescribes": []
+              }
+              EOF
+              sbom_id_2_3="spdx_minimal_curl_fail_2_3"
+              echo "$sbom_id_2_3" > "$workdir/spdx_minimal_curl_fail_2_3"
+
+    - name: run-task
+      taskRef:
+        name: upload-sbom-to-atlas
+      params:
+        - name: atlasSecretName
+          value: atlas-test-sso-secret
+        - name: sbomDir
+          value: "sboms"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+
+    - name: check-result
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - run-task
+      taskSpec:
+        params:
+          - name: sbomDir
+            default: "sboms"
+            description: Directory containing generated SBOM files.
+            type: string
+        workspaces:
+          - name: data
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:3eb493f6b7923e04fbb01b44b24e5491a2bbd1ec
+            script: |
+              #!/usr/bin/env bash
+              set -eux
+
+              workdir="$(workspaces.data.path)/workdir"
+
+              # Check count of curl calls
+              if [ "$(wc -l < "$workdir/mock_curl.txt")" -ne 2 ]; then
+                echo "TEST FAILED: curl was expected to be called 2 times. Actual calls:"
+                cat "$workdir/mock_curl.txt"
+                exit 1
+              else
+                echo "TEST PASSED: Curl has been called 2 times"
+              fi

@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: upload-sbom-to-atlas
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.2.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -229,6 +229,7 @@ spec:
             -H "transfer-encoding: chunked" \
             -H "content-type: application/json" \
             --data "@$supported_version_of_sbom" \
-            "$bombasticApiUrl/api/v1/sbom?id=$sbom_id"
+            "$bombasticApiUrl/api/v1/sbom?id=$sbom_id" \
+            || echo "SBOM upload to Atlas has failed!"
 
         done
