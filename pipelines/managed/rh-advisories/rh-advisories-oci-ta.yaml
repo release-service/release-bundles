@@ -61,7 +61,7 @@ spec:
       description: The revision in the taskGitUrl repo to be used
     - name: ociStorage
       type: string
-      default: quay.io/scoheb/trusted-artifacts
+      default: empty
   workspaces:
     - name: release-workspace
   tasks:
@@ -143,8 +143,8 @@ spec:
           value: $(workspaces.data.path)/work/$(tasks.collect-data.results.snapshotSpec)
         - name: ociStorage
           value: $(params.ociStorage)
-        - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.collect-data.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
+        - name: sourceDataArtifact
+          value: "$(tasks.collect-data.results.sourceDataArtifact)=$(workspaces.data.path)/work"
       workspaces:
         - name: data
           workspace: release-workspace
@@ -197,8 +197,8 @@ spec:
           value: "work/$(tasks.collect-data.results.snapshotSpec)"
         - name: ociStorage
           value: $(params.ociStorage)
-        - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.reduce-snapshot.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work"
+        - name: sourceDataArtifact
+          value: "$(tasks.reduce-snapshot.results.sourceDataArtifact)=$(workspaces.data.path)/work"
       workspaces:
         - name: data
           workspace: release-workspace
