@@ -22,58 +22,68 @@ shopt -s nullglob
 
 WORKSPACE_TEMPLATE=${BASH_SOURCE%/*/*}/resources/workspace-template.yaml
 
-if [ -z "${TRUSTED_ARTIFACT_OCI_STORAGE}" ]
+if [ -z "${USE_TRUSTED_ARTIFACTS}" ]
 then
-  echo "Error: env variable TRUSTED_ARTIFACT_OCI_STORAGE not defined"
-  echo ""
-  echo "It must point to a location in quay where trusted artifacts will be placed."
-  echo "for example: TRUSTED_ARTIFACT_OCI_STORAGE=quay.io/konflux-test-data/trusted-artifacts"
-  exit 1
+  #echo "Warning: env variable TRUSTED_ARTIFACT_OCI_STORAGE not defined"
+  #echo ""
+  #echo "It must point to a location in quay where trusted artifacts will be placed."
+  #echo "for example: TRUSTED_ARTIFACT_OCI_STORAGE=quay.io/konflux-test-data/trusted-artifacts"
+  #echo ""
+  echo "Defaulting to PVC based workspaces..."
+  # empty is needed since trusted-artifacts needs a non-empty storage
+  # parameter in order to reach the skipping logic
+  export TRUSTED_ARTIFACT_OCI_STORAGE="empty"
+else
+
+  echo "Using Trusted Artifacts for workspaces..."
+  export TRUSTED_ARTIFACT_OCI_STORAGE=registry-service.kind-registry/trusted-artifacts
+  export TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH=/tmp/.dockerconfig.json
+
+  kubectl create secret generic docker-config \
+    --from-file=.dockerconfigjson="${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -
+  kubectl patch serviceaccount default -p \
+    '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
+
 fi
 
-if [ -z "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
-then
-  echo "Error: env variable TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH not defined"
-  echo ""
-  echo "It must point to a dockerconfig json file that contains the credentials to push and pull"
-  echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
-  echo ""
-  echo "The file should resemble:
-  {
-    \"auths\": {
-      \"quay.io\": {
-        \"auth\": \"<base64 encoded string of user:password>\"
-      }
-    }
-  }
-  "
-  exit 1
-fi
-
-if [ ! -f "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
-then
-  echo "Error: ${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH} not found"
-  echo ""
-  echo "The file must contain dockerconfig json file that contains the credentials to push and pull"
-  echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
-  echo ""
-  echo "The file should resemble:
-  {
-    \"auths\": {
-      \"quay.io\": {
-        \"auth\": \"<base64 encoded string of user:password>\"
-      }
-    }
-  }
-  "
-  exit 1
-fi
-
-kubectl create secret generic docker-config \
-  --from-file=.dockerconfigjson="${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" \
-  --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -
-kubectl patch serviceaccount default -p \
-  '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
+#  if [ -z "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
+#  then
+#    echo "Error: env variable TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH not defined"
+#    echo ""
+#    echo "It must point to a dockerconfig json file that contains the credentials to push and pull"
+#    echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
+#    echo ""
+#    echo "The file should resemble:
+#    {
+#      \"auths\": {
+#        \"quay.io\": {
+#          \"auth\": \"<base64 encoded string of user:password>\"
+#        }
+#      }
+#    }
+#    "
+#    exit 1
+#  fi
+#
+#  if [ ! -f "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
+#  then
+#    echo "Error: ${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH} not found"
+#    echo ""
+#    echo "The file must contain dockerconfig json file that contains the credentials to push and pull"
+#    echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
+#    echo ""
+#    echo "The file should resemble:
+#    {
+#      \"auths\": {
+#        \"quay.io\": {
+#          \"auth\": \"<base64 encoded string of user:password>\"
+#        }
+#      }
+#    }
+#    "
+#    exit 1
+#  fi
 
 if [ $# -gt 0 ]
 then
@@ -169,8 +179,13 @@ do
       sleep 5
     done
 
-    #PIPELINERUN=$(tkn p start $TEST_NAME -w name=tests-workspace,volumeClaimTemplateFile=$WORKSPACE_TEMPLATE -o json | jq -r '.metadata.name')
-    PIPELINERUN=$(tkn p start $TEST_NAME -p ociStorage=${TRUSTED_ARTIFACT_OCI_STORAGE} -w name=tests-workspace,emptyDir="" -o json | jq -r '.metadata.name')
+    if [ -z "${USE_TRUSTED_ARTIFACTS}" ]; then
+      workSpaceParams="volumeClaimTemplateFile=$WORKSPACE_TEMPLATE"
+    else
+      workSpaceParams="emptyDir="""
+    fi
+    PIPELINERUN=$(tkn p start $TEST_NAME -p ociStorage=${TRUSTED_ARTIFACT_OCI_STORAGE} -w "name=tests-workspace,${workSpaceParams}" -o json | jq -r '.metadata.name')
+
     echo "  Started pipelinerun $PIPELINERUN"
     sleep 1  # allow a second for the pr object to appear (including a status condition)
     while [ "$(kubectl get pr $PIPELINERUN -o=jsonpath='{.status.conditions[0].status}')" == "Unknown" ]

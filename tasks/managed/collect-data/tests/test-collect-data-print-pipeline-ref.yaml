@@ -123,8 +123,8 @@ spec:
       params:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
-        - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
         - name: subdirectory
           value: $(tasks.run-task.results.subdirectory)
       workspaces:
@@ -138,7 +138,7 @@ spec:
             type: string
           - name: subdirectory
             type: string
-          - name: SOURCE_DATA_ARTIFACT
+          - name: sourceDataArtifact
             type: string
         workspaces:
           - name: data
@@ -146,7 +146,7 @@ spec:
           - name: use-trusted-artifact
             args:
               - use
-              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/work
+              - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
             env:
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
@@ -161,9 +161,9 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              if [ "$(wc -l < "$(workspaces.data.path)/work/mock_curl.txt")" != 1 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt")" != 1 ]; then
                 echo Error: curl was expected to be called 1 time. Actual calls:
-                cat "$(workspaces.data.path)/work/mock_curl.txt"
+                cat "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
                 exit 1
               fi
 

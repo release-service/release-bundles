@@ -132,8 +132,8 @@ spec:
           value: $(tasks.run-task.results.data)
         - name: singleComponentMode
           value: $(tasks.run-task.results.singleComponentMode)
-        - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
         - name: subdirectory
           value: "$(tasks.run-task.results.subdirectory)"
       workspaces:
@@ -147,7 +147,7 @@ spec:
             type: string
           - name: singleComponentMode
             type: string
-          - name: SOURCE_DATA_ARTIFACT
+          - name: sourceDataArtifact
             type: string
           - name: subdirectory
             type: string
@@ -155,7 +155,7 @@ spec:
           - name: use-trusted-artifact
             args:
               - use
-              - $(params.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(params.subdirectory)
+              - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
             env:
               - name: "ORAS_OPTIONS"
                 value: "--insecure"

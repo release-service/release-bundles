@@ -128,8 +128,8 @@ spec:
       params:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
-        - name: SOURCE_DATA_ARTIFACT
-          value: "$(tasks.run-task.results.SOURCE_DATA_ARTIFACT)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
         - name: subdirectory
           value: $(tasks.run-task.results.subdirectory)
       workspaces:
