@@ -4,15 +4,20 @@ Publish a built FBC index image using skopeo
 
 ## Parameters
 
-| Name           | Description                                                                               | Optional | Default value |
-|----------------|-------------------------------------------------------------------------------------------|----------|---------------|
-| dataPath       | Path to the JSON string of the merged data to use in the data workspace                   | No       | -             |
-| sourceIndex    | Pullspec to pull the image from                                                           | No       | -             |
-| targetIndex    | Pullspec to push the image to                                                             | No       | -             |
-| retries        | Number of skopeo retries                                                                  | Yes      | 0             |
-| requestTimeout | Max seconds waiting for the status update                                                 | Yes      | 360           |
-| buildTimestamp | Build timestamp for the publishing image                                                  | No       | -             |
-| pipelineRunUid | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -             |
+| Name            | Description                                                                               | Optional | Default value |
+|-----------------|-------------------------------------------------------------------------------------------|----------|---------------|
+| dataPath        | Path to the JSON string of the merged data to use in the data workspace                   | No       | -             |
+| sourceIndex     | Pullspec to pull the image from                                                           | No       | -             |
+| targetIndex     | Pullspec to push the image to                                                             | No       | -             |
+| retries         | Number of skopeo retries                                                                  | Yes      | 0             |
+| requestTimeout  | Max seconds waiting for the status update                                                 | Yes      | 360           |
+| buildTimestamp  | Build timestamp for the publishing image                                                  | No       | -             |
+| pipelineRunUid  | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -             |
+| taskGitUrl      | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -             |
+| taskGitRevision | The revision in the taskGitUrl repo to be used                                            | No       | -             |
+
+## Changes in 4.0.0
+* Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 
 ## Changes in 3.3.0
 * updated the base image used in this task

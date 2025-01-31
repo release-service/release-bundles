@@ -45,6 +45,10 @@ spec:
           value: $(context.pipelineRun.uid)
         - name: dataPath
           value: data.json
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -85,6 +89,16 @@ spec:
               targetIndex=$(jq -r '.targetIndex' <<< "${params}")
               if [ "$targetIndex" != "quay.io/test/targetIndex:tag-abc-11111111111" ]; then
                 echo "targetIndex image does not match"
+                exit 1
+              fi
+
+              if [ "$(jq -r '.taskGitUrl' <<< "${params}")" != "http://localhost" ]; then
+                echo "taskGitUrl image does not match"
+                exit 1
+              fi
+
+              if [ "$(jq -r '.taskGitRevision' <<< "${params}")" != "main" ]; then
+                echo "taskGitRevision image does not match"
                 exit 1
               fi
       runAfter:

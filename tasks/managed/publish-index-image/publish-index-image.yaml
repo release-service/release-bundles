@@ -35,6 +35,12 @@ spec:
     - name: pipelineRunUid
       type: string
       description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   workspaces:
     - name: data
       description: Workspace to store the params and responses for the internalRequest
@@ -76,6 +82,8 @@ spec:
                 -p targetIndex="${publishingImages[$i]}" \
                 -p publishingCredentials="${credentials}" \
                 -p retries="$(params.retries)" \
+                -p taskGitUrl="$(params.taskGitUrl)" \
+                -p taskGitRevision="$(params.taskGitRevision)" \
                 -t "$(params.requestTimeout)" \
                 -l ${pipelinerun_label}="$(params.pipelineRunUid)"
             echo "=== done"

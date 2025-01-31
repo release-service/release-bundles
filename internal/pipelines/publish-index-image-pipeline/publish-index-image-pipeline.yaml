@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: publish-index-image-pipeline
   labels:
-    app.kubernetes.io/version: "0.1"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -29,10 +29,24 @@ spec:
       type: string
       default: "360"
       description: Max seconds waiting for the status update
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   tasks:
     - name: publish-index-image-task
       taskRef:
-        name: publish-index-image-task
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/publish-index-image-task/publish-index-image-task.yaml
       params:
         - name: sourceIndex
           value: $(params.sourceIndex)
