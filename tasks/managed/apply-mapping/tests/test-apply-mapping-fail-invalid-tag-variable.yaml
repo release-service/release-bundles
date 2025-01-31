@@ -19,12 +19,18 @@ spec:
       type: string
   tasks:
     - name: setup
+      params:
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
       workspaces:
         - name: data
           workspace: tests-workspace
       taskSpec:
         results:
           - name: sourceDataArtifact
+            type: string
+        params:
+          - name: subdirectory
             type: string
         workspaces:
           - name: data
@@ -35,8 +41,8 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              mkdir -p "$(workspaces.data.path)/work"
-              cat > "$(workspaces.data.path)/work/test_data.json" << EOF
+              mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
+              cat > "$(workspaces.data.path)/$(params.subdirectory)/test_data.json" << EOF
               {
                 "mapping": {
                   "components": [
@@ -55,7 +61,7 @@ spec:
               }
               EOF
 
-              cat > "$(workspaces.data.path)/work/test_snapshot_spec.json" << EOF
+              cat > "$(workspaces.data.path)/$(params.subdirectory)/test_snapshot_spec.json" << EOF
               {
                 "application": "myapp",
                 "components": [
@@ -72,12 +78,22 @@ spec:
                 ]
               }
               EOF
+          - name: skip-trusted-artifact-operations
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eo pipefail
+              
+              if [ "$(params.ociStorage)" == "empty" ]; then
+                echo "oci storage not detected via params.ociStorage ... skipping trusted artifacts tasks"
+                touch "$(workspaces.data.path)/$(params.subdirectory)/.skip-trusted-artifacts"
+              fi
           - name: create-trusted-artifact
             args:
               - create
               - --store
               - $(params.ociStorage)
-              - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/work
+              - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/$(params.subdirectory)
             computeResources: { }
             image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
             env:
@@ -85,18 +101,31 @@ spec:
                 value: 1d
               - name: "ORAS_OPTIONS"
                 value: "--insecure"
+          - name: patch-source-data-artifact-result
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eu
+              
+              # this is needed to skip trusted-artifacts tasks
+              # when using PVC based workspaces.
+              if [ "$(params.ociStorage)" == "empty" ]; then
+                echo -n "$(params.ociStorage)" > "$(results.sourceDataArtifact.path)"
+              fi
     - name: run-task
       taskRef:
         name: apply-mapping
       params:
         - name: snapshotPath
-          value: work/test_snapshot_spec.json
+          value: $(context.pipelineRun.uid)/test_snapshot_spec.json
         - name: dataPath
-          value: work/test_data.json
+          value: $(context.pipelineRun.uid)/test_data.json
         - name: ociStorage
           value: $(params.ociStorage)
         - name: sourceDataArtifact
-          value: "$(tasks.setup.results.sourceDataArtifact)=$(workspaces.data.path)/work"
+          value: "$(tasks.setup.results.sourceDataArtifact)=$(workspaces.data.path)/$(context.pipelineRun.uid)"
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
       runAfter:
         - setup
       workspaces:
