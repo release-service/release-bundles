@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-publish-index-image
+  name: test-publish-index-image-with-timestamp
 spec:
   description: Test creating a internal request to publish an image
   workspaces:
@@ -17,7 +17,7 @@ spec:
           - name: data
         steps:
           - name: setup-values
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/usr/bin/env sh
               set -eux
@@ -61,18 +61,20 @@ spec:
       taskSpec:
         steps:
           - name: check-result
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/usr/bin/env bash
               set -eux
 
               internalRequest="$(kubectl get internalrequest --sort-by=.metadata.creationTimestamp --no-headers | \
                 sed 's/[[:space:]]*$//')"
-              request=$(kubectl get internalrequest "${internalRequest}" -o jsonpath="{.spec.request}")
+              pipeline="$(kubectl get internalrequest "${internalRequest}" -o \
+                jsonpath="{.spec.pipeline.pipelineRef.params[2].value}")"
               params=$(kubectl get internalrequest "${internalRequest}" -o jsonpath="{.spec.params}")
 
-              if [ "$request" != "publish-index-image-pipeline" ]; then
-                echo "request pipeline does not match"
+              if [ "$pipeline" != \
+                "pipelines/internal/publish-index-image-pipeline/publish-index-image-pipeline.yaml" ]; then
+                echo "pipeline does not match"
                 exit 1
               fi
 
@@ -108,7 +110,7 @@ spec:
       taskSpec:
         steps:
           - name: delete-crs
-            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
             script: |
               #!/usr/bin/env sh
               set -eux
