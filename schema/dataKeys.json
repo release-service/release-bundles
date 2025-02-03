@@ -115,8 +115,12 @@
       "type": "object",
       "properties": {
         "product_id": {
-          "type": "integer",
-          "description": "The product ID e.g 321"
+          "type": ["array", "integer"],
+          "minItems": 1,
+          "description": "The list of product IDs e.g [321]",
+          "items": {
+            "type": "integer"
+          }
         },
         "product_name": {
           "type": "string",
@@ -132,8 +136,12 @@
           "description": "The product stream e.g. RHEL-tp1"
         },
         "cpe": {
-          "type": "string",
-          "description": "The product CPE ID e.g. cpe:/a:example:openstack:el8"
+          "type": ["array", "string"],
+          "minItems": 1,
+          "description": "The list of product CPE IDs e.g. [\"cpe:/a:example:openstack:el8\"]",
+          "items": {
+            "type": "string"
+          }
         },
         "type": {
           "type": "string",
