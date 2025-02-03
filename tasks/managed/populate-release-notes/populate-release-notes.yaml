@@ -2,15 +2,15 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: populate-release-notes-images
+  name: populate-release-notes
   labels:
-    app.kubernetes.io/version: "2.3.1"
+    app.kubernetes.io/version: "3.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
 spec:
   description: >-
-    Tekton task to populate the releaseNotes.content.images key in the data.json file
+    Tekton task to populate releaseNotes keys in the data.json file
   params:
     - name: dataPath
       description: Path to the JSON string of the merged data to use
@@ -141,3 +141,35 @@ spec:
                     /tmp/sbomData.tmp && mv /tmp/sbomData.tmp "${sbomDataPath}"
             done
         done
+    - name: populate-release-notes-references
+      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      script: |
+        #!/usr/bin/env bash
+        set -ex
+
+        DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
+        if [ ! -f "${DATA_FILE}" ] ; then
+            echo "No data JSON was provided."
+            exit 1
+        fi
+
+        if [ "$(jq -r '.releaseNotes.type' "${DATA_FILE}")" != "RHSA" ] ; then
+            echo "Type is not RHSA. Not adding references"
+            exit 0
+        fi
+
+        # Inject classification link into data.json references
+        jq '.releaseNotes.references += ["https://access.redhat.com/security/updates/classification/"]' \
+            "${DATA_FILE}" > /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"
+
+        NUM_CVES=$(jq '.releaseNotes.cves | length' "${DATA_FILE}")
+        for ((i = 0; i < NUM_CVES; i++))
+        do
+            cve=$(jq -r --argjson i "$i" '.releaseNotes.cves[$i].key' "${DATA_FILE}")
+            # Inject cve link into data.json references
+            jq --arg cve "$cve" '.releaseNotes.references += ["https://access.redhat.com/security/cve/\($cve)"]' \
+                "${DATA_FILE}" > /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"
+        done
+
+        # Remove duplicate references
+        jq '.releaseNotes.references |= unique' "${DATA_FILE}" > /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"

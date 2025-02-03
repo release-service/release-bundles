@@ -2,11 +2,11 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-populate-release-notes-images-no-overwrite
+  name: test-populate-release-notes-single-image
 spec:
   description: |
-    Run the populate-release-notes-images task and ensure existing information in the
-    releaseNotes.content.images section of the data JSON is not overwritten
+    Run the populate-release-notes task with a single image in the snapshot JSON and verify
+    the data JSON has the proper content
   workspaces:
     - name: tests-workspace
   tasks:
@@ -44,13 +44,6 @@ spec:
                       }
                     ]
                   },
-                  "content": {
-                    "images": [
-                      {
-                        "one": "two"
-                      }
-                    ]
-                  },
                   "synopsis": "test synopsis",
                   "topic": "test topic",
                   "description": "test description",
@@ -81,7 +74,7 @@ spec:
               EOF
     - name: run-task
       taskRef:
-        name: populate-release-notes-images
+        name: populate-release-notes
       params:
         - name: dataPath
           value: "data.json"
@@ -93,20 +86,47 @@ spec:
       runAfter:
         - setup
     - name: check-result
+      params:
+        - name: sbomDataPath
+          value: $(tasks.run-task.results.sbomDataPath)
       workspaces:
         - name: data
           workspace: tests-workspace
       taskSpec:
+        params:
+          - name: sbomDataPath
         workspaces:
           - name: data
         steps:
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
-              #!/usr/bin/env sh
+              #!/usr/bin/env bash
               set -eux
 
-              # The existing image should be there + 2 new ones (one image, two architectures in it per mocks.sh)
-              test "$(jq '.releaseNotes.content.images | length' "$(workspaces.data.path)/data.json")" == 3
+              imagearch1=$(jq '.releaseNotes.content.images[0]' "$(workspaces.data.path)/data.json")
+              test "$(jq -r '.architecture' <<< "$imagearch1")" == "amd64"
+              test "$(jq -r '.containerImage' <<< "$imagearch1")" == "registry.redhat.io/product/repo@sha256:abcdefg"
+              test "$(jq -r '.purl' <<< "$imagearch1")" == \
+                "pkg:oci/repo@sha256%3Aabcdefg?arch=amd64&repository_url=registry.redhat.io/product"
+              test "$(jq -r '.repository' <<< "$imagearch1")" == "registry.redhat.io/product/repo"
+              test "$(jq -rc '.tags' <<< "$imagearch1")" == '["foo","bar"]'
+              test "$(jq -rc '.component' <<< "$imagearch1")" == "comp"
+
+              imagearch2=$(jq '.releaseNotes.content.images[1]' "$(workspaces.data.path)/data.json")
+              test "$(jq -r '.architecture' <<< "$imagearch2")" == "s390x"
+              test "$(jq -r '.containerImage' <<< "$imagearch2")" == "registry.redhat.io/product/repo@sha256:deadbeef"
+              test "$(jq -r '.purl' <<< "$imagearch2")" == \
+                "pkg:oci/repo@sha256%3Adeadbeef?arch=s390x&repository_url=registry.redhat.io/product"
+              test "$(jq -r '.repository' <<< "$imagearch2")" == "registry.redhat.io/product/repo"
+              test "$(jq -rc '.tags' <<< "$imagearch2")" == '["foo","bar"]'
+              test "$(jq -rc '.component' <<< "$imagearch2")" == "comp"
+
+              # Test SBOM injection
+              test "$(jq -r '.images[0].multiarch' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "true"
+
+              test "$(jq -r '.images[0].imageSha' \
+                "$(workspaces.data.path)/$(params.sbomDataPath)")" == "123456"
       runAfter:
         - run-task

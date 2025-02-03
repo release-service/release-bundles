@@ -2,12 +2,12 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-populate-release-notes-images-fail-missing-snapshot
+  name: test-populate-release-notes-fail-missing-snapshot
   annotations:
     test/assert-task-failure: "run-task"
 spec:
   description: |
-    Run the populate-release-notes-images task without a snapshot JSON and verify that the task fails as expected.
+    Run the populate-release-notes task without a snapshot JSON and verify that the task fails as expected.
   workspaces:
     - name: tests-workspace
   tasks:
@@ -57,7 +57,7 @@ spec:
               EOF
     - name: run-task
       taskRef:
-        name: populate-release-notes-images
+        name: populate-release-notes
       params:
         - name: dataPath
           value: "data.json"

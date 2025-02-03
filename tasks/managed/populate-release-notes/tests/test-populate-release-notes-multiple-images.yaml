@@ -2,10 +2,10 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-populate-release-notes-images-multiple-images
+  name: test-populate-release-notes-multiple-images
 spec:
   description: |
-    Run the populate-release-notes-images task with multiple images in the snapshot JSON and verify
+    Run the populate-release-notes task with multiple images in the snapshot JSON and verify
     the data JSON has the proper content
   workspaces:
     - name: tests-workspace
@@ -86,7 +86,7 @@ spec:
               EOF
     - name: run-task
       taskRef:
-        name: populate-release-notes-images
+        name: populate-release-notes
       params:
         - name: dataPath
           value: "data.json"

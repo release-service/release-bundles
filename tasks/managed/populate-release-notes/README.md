@@ -1,6 +1,6 @@
-# populate-release-notes-images
+# populate-release-notes
 
-Tekton task to populate the releaseNotes.content.images key in the data.json
+Tekton task to populate fields of the releaseNotes  key in the data.json
 file. It will update the data.json in place so that downstream tasks relying on
 the releaseNotes data can use it. Additionally, it outputs a result with the
 path to a file containing data used in component SBOM generation.
@@ -11,6 +11,10 @@ path to a file containing data used in component SBOM generation.
 |--------------|----------------------------------------------------------------------|----------|---------------|
 | dataPath     | Path to the JSON string of the merged data to update                 | No       | -             |
 | snapshotPath | Path to the JSON string of the mapped Snapshot in the data workspace | No       | -             |
+
+## Changes in 3.0.0
+* Task renamed from `populate-release-notes-images` to `populate-release-notes`
+* Task will now inject references if the `releaseNotes.type` is `RHSA`
 
 ## Changes in 2.3.1
 * Fix shellcheck/checkton linting issues in the task and tests

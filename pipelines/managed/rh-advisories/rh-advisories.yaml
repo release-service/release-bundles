@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.8.4"
+    app.kubernetes.io/version: "1.9.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -226,7 +226,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - apply-mapping
-    - name: populate-release-notes-images
+    - name: populate-release-notes
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -239,7 +239,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/managed/populate-release-notes-images/populate-release-notes-images.yaml
+            value: tasks/managed/populate-release-notes/populate-release-notes.yaml
         resolver: git
       runAfter:
         - apply-mapping
@@ -269,7 +269,7 @@ spec:
         - name: data
           workspace: release-workspace
       runAfter:
-        - populate-release-notes-images
+        - populate-release-notes
     - name: collect-cosign-params
       taskRef:
         resolver: "git"
@@ -504,14 +504,14 @@ spec:
           workspace: release-workspace
       params:
         - name: sbomJsonPath
-          value: "$(tasks.populate-release-notes-images.results.sbomDataPath)"
+          value: "$(tasks.populate-release-notes.results.sbomDataPath)"
         - name: downloadedSbomPath
           value: "$(tasks.push-rpm-data-to-pyxis.results.sbomPath)"
       runAfter:
         - collect-data
         - collect-atlas-params
         - push-rpm-data-to-pyxis
-        - populate-release-notes-images
+        - populate-release-notes
     - name: upload-component-sbom
       when:
         - input: "$(tasks.collect-atlas-params.results.secretName)"
@@ -596,7 +596,7 @@ spec:
         - name: data
           workspace: release-workspace
       runAfter:
-        - populate-release-notes-images
+        - populate-release-notes
     - name: collect-atlas-params
       taskRef:
         resolver: "git"
@@ -637,7 +637,7 @@ spec:
           workspace: release-workspace
       runAfter:
         - collect-atlas-params
-        - populate-release-notes-images
+        - populate-release-notes
     - name: upload-product-sbom
       when:
         - input: "$(tasks.collect-atlas-params.results.secretName)"

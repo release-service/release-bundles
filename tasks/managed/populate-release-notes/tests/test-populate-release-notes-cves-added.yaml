@@ -2,10 +2,10 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-populate-release-notes-images-cves-added
+  name: test-populate-release-notes-cves-added
 spec:
   description: |
-    Run the populate-release-notes-images task and ensure CVE information present in the data.json
+    Run the populate-release-notes task and ensure CVE information present in the data.json
     is properly included in the releaseNotes.content.images.
   workspaces:
     - name: tests-workspace
@@ -104,7 +104,7 @@ spec:
               EOF
     - name: run-task
       taskRef:
-        name: populate-release-notes-images
+        name: populate-release-notes
       params:
         - name: dataPath
           value: "data.json"
