@@ -22,8 +22,26 @@ jobs:
           dir_names: "true"
           dir_names_max_depth: "3"
       - name: Show changed dirs
+        id: show-changed-dirs
+        shell: bash
         run: |
           echo ${{ steps.changed-dirs.outputs.all_changed_files }}
+          trustedArtifactsBasedTasks=()
+          for dir in ${{ steps.changed-dirs.outputs.all_changed_files }}
+          do
+            echo "$dir"
+            baseDir=$(basename "${dir}")
+            taskFile="${dir}/${baseDir}.yaml"
+            if [ -f "${taskFile}" ]; then
+              ociStageParam=$(yq '.spec.params[] | select(.name == "ociStorage") | .name' "${taskFile}")
+              if [ ! -z "${ociStageParam}" ]; then
+                echo "Found a trusted artifacts compatible task: ${taskFile}"
+                trustedArtifactsBasedTasks+=($dir)
+              fi
+            fi
+          done
+          echo "trustedArtifactsBasedTasks: ${trustedArtifactsBasedTasks[@]}"
+          echo "trustedArtifactsBasedTasks=${trustedArtifactsBasedTasks[@]}" >> $GITHUB_OUTPUT
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
         if: |
@@ -65,11 +83,18 @@ jobs:
         if: |
           steps.changed-dirs.outputs.any_changed == 'true'
         uses: ./.github/actions/install-tkn
-      - name: Test Tekton tasks
+      - name: Test Tekton tasks using PVC-based workspace
         if: |
           steps.changed-dirs.outputs.any_changed == 'true'
         run: .github/scripts/test_tekton_tasks.sh
         env:
-          USE_TRUSTED_ARTIFACTS: true
           TEST_ITEMS: >-
             ${{ steps.changed-dirs.outputs.all_changed_files }}
+      - name: Test Tekton tasks with Trusted Artifacts
+        if: |
+          steps.show-changed-dirs.outputs.trustedArtifactsBasedTasks != ''
+        run: .github/scripts/test_tekton_tasks.sh
+        env:
+          USE_TRUSTED_ARTIFACTS: true
+          TEST_ITEMS: >-
+            ${{ steps.show-changed-dirs.outputs.trustedArtifactsBasedTasks }}
