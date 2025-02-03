@@ -51,7 +51,8 @@ spec:
               kubectl apply -f snapshot
 
               mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
-              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
+              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee \
+                "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
               chmod 666 "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
           - name: skip-trusted-artifact-operations
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
@@ -151,11 +152,13 @@ spec:
               set -eux
 
               cat "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
-              if [ "$(jq '.components | length' < "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json")" -ne 1 ]; then
+              if [ "$(jq '.components | length' < "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json")" \
+                -ne 1 ]; then
                 echo "ERROR: Resulting snapshot does not contain 1 component"
                 exit 1
               fi
-              if [ "$(jq -cr '.components[0].name' < "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json")" != "tom" ]; then
+              if [ "$(jq -cr '.components[0].name' < "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json")" \
+                != "tom" ]; then
                 echo "ERROR: Resulting snapshot does not contain the 'tom' component"
                 exit 1
               fi
