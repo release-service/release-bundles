@@ -286,5 +286,3 @@ spec:
           value: "--insecure"
         - name: "HOME"
           value: "/tekton/home"
-        - name: "DEBUG"
-          value: "1"
