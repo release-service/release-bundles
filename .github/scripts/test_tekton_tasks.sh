@@ -24,11 +24,6 @@ WORKSPACE_TEMPLATE=${BASH_SOURCE%/*/*}/resources/workspace-template.yaml
 
 if [ -z "${USE_TRUSTED_ARTIFACTS}" ]
 then
-  #echo "Warning: env variable TRUSTED_ARTIFACT_OCI_STORAGE not defined"
-  #echo ""
-  #echo "It must point to a location in quay where trusted artifacts will be placed."
-  #echo "for example: TRUSTED_ARTIFACT_OCI_STORAGE=quay.io/konflux-test-data/trusted-artifacts"
-  #echo ""
   echo "Defaulting to PVC based workspaces..."
   # empty is needed since trusted-artifacts needs a non-empty storage
   # parameter in order to reach the skipping logic
@@ -46,44 +41,6 @@ else
     '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
 
 fi
-
-#  if [ -z "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
-#  then
-#    echo "Error: env variable TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH not defined"
-#    echo ""
-#    echo "It must point to a dockerconfig json file that contains the credentials to push and pull"
-#    echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
-#    echo ""
-#    echo "The file should resemble:
-#    {
-#      \"auths\": {
-#        \"quay.io\": {
-#          \"auth\": \"<base64 encoded string of user:password>\"
-#        }
-#      }
-#    }
-#    "
-#    exit 1
-#  fi
-#
-#  if [ ! -f "${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" ]
-#  then
-#    echo "Error: ${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH} not found"
-#    echo ""
-#    echo "The file must contain dockerconfig json file that contains the credentials to push and pull"
-#    echo "trusted artifacts from TRUSTED_ARTIFACT_OCI_STORAGE = ${TRUSTED_ARTIFACT_OCI_STORAGE}"
-#    echo ""
-#    echo "The file should resemble:
-#    {
-#      \"auths\": {
-#        \"quay.io\": {
-#          \"auth\": \"<base64 encoded string of user:password>\"
-#        }
-#      }
-#    }
-#    "
-#    exit 1
-#  fi
 
 if [ $# -gt 0 ]
 then
