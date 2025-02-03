@@ -16,6 +16,9 @@ replacements to a yaml file that already exists. It will attempt to create a Mer
 | tempDir                        | temp dir for cloning and updates                                                                                                                                                         | Yes      | /tmp/$(context.taskRun.uid)/file-updates |
 | internalRequestPipelineRunName | name of the PipelineRun that called this task                                                                                                                                            | No       | -                                        |
 
+## Changes in 0.1.1
+* Revert idempotent changes as they are not working
+
 ## Changes in 0.1.0
 * make run-file-updates task idempotent
 
