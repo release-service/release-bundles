@@ -25,11 +25,18 @@ You can also expand image labels, e.g. "{{ labels.mylabel }}" -> The value of im
 
 ## Parameters
 
-| Name              | Description                                                                                  | Optional | Default value |
-|-------------------|----------------------------------------------------------------------------------------------|----------|---------------|
-| snapshotPath      | Path to the JSON string of the Snapshot spec in the config workspace to apply the mapping to | No       | -             |
-| dataPath          | Path to the JSON string of the merged data to use in the data workspace                      | No       | -             |
-| failOnEmptyResult | Fail the task if the resulting snapshot contains zero components                             | Yes      | false         |
+| Name                    | Description                                                                                                                 | Optional | Default value |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------|----------|---------------|
+| snapshotPath            | Path to the JSON string of the Snapshot spec in the config workspace to apply the mapping to                                | No       | -             |
+| dataPath                | Path to the JSON string of the merged data to use in the data workspace                                                     | No       | -             |
+| failOnEmptyResult       | Fail the task if the resulting snapshot contains zero components                                                            | Yes      | false         |
+| ociStorage              | The OCI repository where the Trusted Artifacts are stored.                                                                  | No       | -             |
+| ociArtifactExpiresAfter | Expiration date for the trusted artifacts created in the OCI repository. An empty string means the artifacts do not expire. | Yes      | 1d            |
+| sourceDataArtifact      | Location of trusted artifacts to be used to populate data directory                                                         | No       | -             |
+| subdirectory            | Subdirectory inside the workspace to be used                                                                                | No       | -             |
+
+## Changes in 1.10.0
+* This task now supports Trusted artifacts
 
 ## Changes in 1.9.0
 * support defaults for `contentGateway`
