@@ -86,6 +86,7 @@ spec:
         - name: requireInternalServices
           value: "true"
     - name: collect-data
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -114,6 +115,7 @@ spec:
       runAfter:
         - verify-access-to-resources
     - name: check-data-keys
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       params:
         - name: dataPath
           value: "$(tasks.collect-data.results.data)"
@@ -139,6 +141,7 @@ spec:
       runAfter:
         - collect-data
     - name: reduce-snapshot
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -192,6 +195,7 @@ spec:
       runAfter:
         - verify-access-to-resources
     - name: apply-mapping
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 3
       taskRef:
         resolver: "git"
@@ -215,6 +219,7 @@ spec:
       runAfter:
         - reduce-snapshot
     - name: verify-enterprise-contract
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "bundles"
         params:
@@ -247,6 +252,7 @@ spec:
       runAfter:
         - apply-mapping
     - name: collect-cosign-params
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -293,6 +299,7 @@ spec:
         - push-snapshot
         - collect-cosign-params
     - name: push-snapshot
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 5
       when:
         - input: "$(tasks.apply-mapping.results.mapped)"
@@ -320,6 +327,7 @@ spec:
       runAfter:
         - rh-sign-image
     - name: collect-pyxis-params
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -383,6 +391,7 @@ spec:
         - publish-pyxis-repository
         - extract-requester-from-release
     - name: create-pyxis-image
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 5
       taskRef:
         resolver: "git"
@@ -410,6 +419,7 @@ spec:
       runAfter:
         - push-snapshot
     - name: publish-pyxis-repository
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 5
       taskRef:
         resolver: "git"
@@ -438,6 +448,7 @@ spec:
         - collect-pyxis-params
         - apply-mapping
     - name: push-rpm-data-to-pyxis
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 5
       taskRef:
         resolver: "git"
@@ -461,6 +472,7 @@ spec:
       runAfter:
         - create-pyxis-image
     - name: run-file-updates
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       params:
         - name: fileUpdatesPath
           value: $(tasks.collect-data.results.data)
@@ -492,6 +504,7 @@ spec:
         - name: data
           workspace: release-workspace
     - name: update-cr-status
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       params:
         - name: resource
           value: $(params.release)
@@ -513,6 +526,7 @@ spec:
         - run-file-updates
   finally:
     - name: cleanup
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
