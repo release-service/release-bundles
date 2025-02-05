@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: process-file-updates-task
   labels:
-    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -203,7 +203,7 @@ spec:
               # only a single line was replaced and that the result
               # block has the same number of lines as before
               sed -ne "${startBlock},+${valueSize}p" "${targetFile}" > "${TEMP}/result.txt"
-              diff -u "${TEMP}/{found,result}.txt" > "${TEMP}/diff.txt" || true
+              diff -u "${TEMP}/found.txt" "${TEMP}/result.txt" > "${TEMP}/diff.txt" || true
 
               replacedBlockLines=$(wc -l < "${TEMP}/result.txt")
               if [[ $replacedBlockLines != $(( valueSize +1 )) ]]; then
@@ -251,7 +251,86 @@ spec:
         fi
 
         echo -e "\n*** START LOCAL CHANGES ***\n"
-        git diff
+        echo -e "\n*** Result from git diff ***\n"
+        # compare the differences between the working directory and the staging area 
+        git diff | tee "${TEMP}"/tempMRFile.diff
+
+        echo -e "\n*** Result from git diff --cache ***\n"
+        # compare the differences between the staging area and the latest commit
+        git diff --cached | tee "${TEMP}"/tempMRFile-cached.diff
+
+        if [[ -s "${TEMP}"/tempMRFile.diff ]]; then
+            # replacements exist 
+            # It's to deal with the lines like "@@ -N1,N2 +N3,N4 @@", 
+            # but it's possible to meet a line like "@@ -4,7 +4,7 @@ $schema: /app/app-settings.yml".
+            awk '/^@@/ {match($0, /@@ ([^@]+) @@/, arr); print arr[1]}' "${TEMP}"/tempMRFile.diff |\
+               tee "${TEMP}"/lineFile
+        elif [[ ! -s "${TEMP}"/tempMRFile-cached.diff ]]; then
+           # only seed exists and the file with the same content is there already 
+           echo "the seeding file already exists" \
+               | tee -a "$(results.fileUpdatesInfo.path)"
+           echo -n "Success" |tee "$(results.fileUpdatesState.path)"
+           exit 0
+        fi
+
+        # Get all MRs by paginating through results
+        page=1
+        openMRList=""
+        while true; do
+            mrPage=$(glab mr list -R "${UPSTREAM_REPO}" --search "Konflux release" \
+                --per-page 100 --page $page | grep "^!" || true)
+            # add "$mrPagei" == '' check for unit testing
+            if [ -z "$mrPage" ] || [ "$mrPage" == '' ] ; then
+                break
+            fi
+            openMRList="${openMRList}${mrPage}"$'\n'
+            ((page++))
+        done
+
+        # Remove trailing newline
+        openMRList=$(echo "$openMRList" | sed '/^$/d')
+
+        if [ -n "$openMRList" ]; then        
+            while IFS= read -r oneItem; do
+                mrNum=$(echo "$oneItem" | cut -f1 | tr -d '!')
+                foundMR=false
+                glab mr diff "${mrNum}" --repo "${UPSTREAM_REPO}" > "${TEMP}"/oneMR.diff 
+
+                if [[ ! -s "${TEMP}"/lineFile ]]; then
+                    # only seed exists and no replacements  
+                    grep '^[+][^+]' "${TEMP}"/oneMR.diff | sed -E 's/^[+]//' | tee "${TEMP}/mrFile"
+
+                    # compare if the contents and the updated file names are the same 
+                    if  diff -q "${TEMP}"/mrFile "${targetFile}" > /dev/null; then
+                        grep "^diff --git" "${TEMP}"/oneMR.diff | tee "${TEMP}"/tmpFile
+                        while read -r line ; do
+                            changedFileName=$(echo "$line" | awk '{sub(/^b\//, "", $NF); print $NF}')
+                            if [[ "${changedFileName}" != "${targetFile}" ]]; then
+                                continue
+                            fi
+                            foundMR=true
+                            break
+                        done < "${TEMP}"/tmpFile
+                    fi
+                else
+                    # replacements exist
+                    grep '^[-+@]' "${TEMP}"/oneMR.diff | sed -E 's/^[@]//; s/@@.*//' | tee "${TEMP}/mrFile"
+                    grep '^[-+@]' "${TEMP}"/tempMRFile.diff | sed -E 's/^[@]//; s/@@.*//' | tee "${TEMP}/tmpFile"
+                    if diff -q "${TEMP}"/mrFile "${TEMP}"/tmpFile > /dev/null; then
+                        foundMR=true
+                    fi
+                fi
+                # if all the lines are matched, the MR is the same one
+                # it should exit 0 if the same MR exists 
+                if [[ "$foundMR" == true ]]; then
+                    echo "there is an existing MR with the same updates in the repo"
+                    echo "{\"merge_request\":\"${UPSTREAM_REPO}/-/merge_requests/${mrNum}\"}" \
+                        | tee -a "$(results.fileUpdatesInfo.path)" 
+                    echo -n "Success" | tee "$(results.fileUpdatesState.path)"
+                    exit 0
+                fi
+            done <<< "$openMRList"
+        fi
         echo -e "\n*** END LOCAL CHANGES ***\n"
 
         WORKING_BRANCH=$(uuidgen |awk '{print substr($1, 1, 8)}')

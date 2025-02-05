@@ -26,6 +26,10 @@ spec:
       type: string
       description: Name of the request
       default: "process-file-updates"
+    - name: requestTimeout
+      type: string
+      default: "900"
+      description: InternalRequest timeout
     - name: synchronously
       type: string
       description: Whether to run synchronously or not
@@ -103,6 +107,7 @@ spec:
                            -p taskGitUrl="$(params.taskGitUrl)" \
                            -p taskGitRevision="$(params.taskGitRevision)" \
                            -s "$(params.synchronously)" \
+                           -t "$(params.requestTimeout)" \
                            -l ${TASK_LABEL}="${TASK_ID}" \
                            -l ${REQUEST_LABEL}="${requestId}" \
                            -l "${PIPELINERUN_LABEL}=$(params.pipelineRunUid)"

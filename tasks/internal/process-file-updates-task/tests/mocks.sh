@@ -38,7 +38,11 @@ function glab() {
     gitRepo=$(echo "$*" | cut -f5 -d/ | cut -f1 -d.)
     echo "/merge_request/1"
   elif [[ "$*" == *"mr list"* ]]; then
-    echo '!1'
+    if [[ "$*" == *"page 1" ]]; then
+      echo '!1'
+    else
+      echo ''
+    fi
   elif [[ "$*" == *"mr diff"* ]]; then
     gitRepo=$(echo "$*" | cut -f5 -d/ | cut -f1 -d.)
     if [[ "${gitRepo}" == "replace-idempotent" ]]; then

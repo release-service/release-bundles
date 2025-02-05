@@ -16,13 +16,18 @@ replacements to a yaml file that already exists. It will attempt to create a Mer
 | tempDir                        | temp dir for cloning and updates                                                                                                                                                         | Yes      | /tmp/$(context.taskRun.uid)/file-updates |
 | internalRequestPipelineRunName | name of the PipelineRun that called this task                                                                                                                                            | No       | -                                        |
 
+## Changes in 1.0.0
+* Add idempotent changes with some fix
+  - It fixed some issue about `glab mr list` to handle anything from 0 to
+    an unlimited number of results
+
 ## Changes in 0.1.1
 * Revert idempotent changes as they are not working
 
 ## Changes in 0.1.0
-* make run-file-updates task idempotent
+* Make run-file-updates task idempotent
 
 ## Changes in 0.0.2
-* add new `internalRequestPipelineRunName` parameter and result
+* Add new `internalRequestPipelineRunName` parameter and result
   - Tekton only supports passing task results as pipeline results,
     so we need to pass the PLR name to the task first and then emit it from the task
