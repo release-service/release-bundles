@@ -19,6 +19,14 @@ The relative path of the pyxis.json file in the data workspace is output as a ta
 | snapshotPath | Path to the JSON string of the mapped Snapshot spec in the data workspace                                                                                                                                                                                                                                                                                                                                   | No       | -             |
 | dataPath     | Path to the JSON string of the merged data to use in the data workspace                                                                                                                                                                                                                                                                                                                                     | No       |               |
 
+## Changes in 3.7.0
+* Revert image back to the version from 3.5.0
+  * The new image contained two things:
+    * New functionality to update image tags
+    * It stopped creating a second quay.io repository entry in Pyxis
+  * It turns out the second thing breaks clair-wrapper, so revert the change
+    until clair-wrapper is modified
+
 ## Changes in 3.6.0
 * Bumped the utils image used in this task
   * The updated image contains changes in create_container_image python script to enable the use case of updating tags when releasing the same image again
