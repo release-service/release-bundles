@@ -2,10 +2,12 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-request-and-upload-signature
+  name: test-request-and-upload-signature-failure
+  annotations:
+    test/assert-task-failure: "run-task"
 spec:
   description: |
-    Run the request-and-upload-signature task and make sure that task succeeds
+    Run the request-and-upload-signature with error in signer response 
   workspaces:
     - name: tests-workspace
   tasks:
@@ -24,7 +26,7 @@ spec:
               set -eux
               cat << EOF | jq -Mc > "$(workspaces.data.path)/mocked_signing_response"
               {
-                "signer_result": {"status": "ok", "error_message": ""},
+                "signer_result": {"status": "error", "error_message": "test-error"},
                 "operation_results": [
                   [
                     {"i": 1,
@@ -44,27 +46,29 @@ spec:
                        "signing_server_responded": "3000-01-01T01:01:02.000000",
                        "signing_status": "success"
                      },
-                     "msg_id": "msg-id-1",
-                     "timestamp": 1738685708,
-                     "topic": "/topic/VirtualTopic.eng.test.dist.sign.123456",
-                     "username": "1001030000"
+                    "msg_id": "msg-id-1",
+                    "timestamp": 1738685708,
+                    "topic": "/topic/VirtualTopic.eng.test.dist.sign.123456",
+                    "username": "1001030000"
                     },
                     {"amq6100_originalDestination": "topic://VirtualTopic.eng.test.dist.sign.123456",
                      "content-type": "text/plain",
                      "amq6100_destination": "queue://Consumer.test-user.123456.VirtualTopic.eng.test.dist.sign.123456"
                     }
-                  ]],
+                  ]
+                ],
                 "operation": {
                   "digests": ["sha256:123456"],
                   "references": ["registry.redhat.io/myproduct/myrepo:abc"],
-                  "signing_key": "test-signing-key",
-                  "task_id": "123456"},
-                  "signing_key": "test-signing-key"
+                  "signing_key": "test-signing-key", "task_id": "123456"
+                },
+                "signing_key": "test-signing-key"
               }
               EOF
               touch "$(workspaces.data.path)/mock_pubtools-pyxis-upload-signatures.txt"
               touch "$(workspaces.data.path)/signing_response.json"
               chmod 0777 -R "$(workspaces.data.path)"
+              cat "$(workspaces.data.path)/mocked_signing_response"
     - name: run-task
       taskRef:
         name: request-and-upload-signature
@@ -76,7 +80,7 @@ spec:
         - name: references
           value: "registry.redhat.io/myproduct/myrepo:abc"
         - name: requester
-          value: tom
+          value: iamgoingtofail
         - value: 4096R/55A34A82 SHA-256
           name: sig_key_id
         - value: containerisvsign
@@ -110,3 +114,24 @@ spec:
           workspace: tests-workspace
       runAfter:
         - setup
+    - name: check-result
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:2ddb2b1e7b406674273a2aa3d3e4e92b78cdf625
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              if [ "$(cat "$(workspaces.data.path)/request-signature-failure-count.txt")" != 3 ]; then
+                echo Error: request-signature was expected to be fail 3 times. Actual calls:
+                cat "$(workspaces.data.path)/request-signature-failure-count.txt"
+                exit 1
+              fi
+      runAfter:
+        - run-task

@@ -8,13 +8,13 @@ function internal-pipelinerun() {
   END_TIME=$(date -ud "$TIMEOUT seconds" +%s)
 
   echo Mock internal-pipelinerun called with: $*
-  echo $* >> $(workspaces.data.path)/mock_internal-pipelinerun.txt
+  echo "$*" >> $(workspaces.data.path)/mock_internal-pipelinerun.txt
 
   # since we put the PLR in the background, we need to be able to locate it so we can
   # get the name to patch it. We do this by tacking on another random label that we can use
   # to select with later.
   rando=$(openssl rand -hex 12)
-  /home/utils/internal-pipelinerun $@ -l "internal-services.appstudio.openshift.io/test-id=$rando" &
+  /home/utils/internal-pipelinerun "$@" -l "internal-services.appstudio.openshift.io/test-id=$rando" &
 
   sleep 2
   NAME=
@@ -37,9 +37,9 @@ function internal-pipelinerun() {
   done
   echo "PLR Name: $NAME"
 
-  if [[ "$*" == *"requester=testuser-failure"* ]]; then
+  if [[ "$*" == *"expected-ir-failure"* ]]; then
       set_plr_status $NAME Failure 5
-  elif [[ "$*" == *"requester=testuser-timeout"* ]]; then
+  elif [[ "$*" == *"expected-timeout-failure"* ]]; then
       echo "skipping setting PLR status since we want a timeout..."
   else
       set_plr_status $NAME Succeeded 5
@@ -88,7 +88,7 @@ function internal-request() {
   # get the name to patch it. We do this by tacking on another random label that we can use
   # to select with later.
   rando=$(openssl rand -hex 12)
-  /home/utils/internal-request $@ -l "internal-services.appstudio.openshift.io/test-id=$rando" &
+  /home/utils/internal-request "$@" -l "internal-services.appstudio.openshift.io/test-id=$rando" &
 
   sleep 2
   NAME=
@@ -111,9 +111,9 @@ function internal-request() {
   done
   echo "IR Name: $NAME"
 
-  if [[ "$*" == *"requester=testuser-failure"* ]]; then
+  if [[ "$*" == *"expected-ir-failure"* ]]; then
       set_ir_status $NAME Failure 5
-  elif [[ "$*" == *"requester=testuser-timeout"* ]]; then
+  elif [[ "$*" == *"expected-timeout-failure"* ]]; then
       echo "skipping setting IR status since we want a timeout..."
   else
       set_ir_status $NAME Succeeded 5

@@ -18,7 +18,12 @@ Task to create internalrequests or pipelineruns to sign snapshot components
 | pyxisServer              | The server type to use. Options are 'production','production-internal,'stage-internal' and 'stage'.                                                                                                                                               | Yes      | production    |
 | pyxisSecret              | The kubernetes secret to use to authenticate to Pyxis. It needs to contain two keys: key and cert                                                                                                                                                 | No       | -             |
 | signRegistryAccessPath   | The relative path in the workspace to a text file that contains a list of repositories that needs registry.access.redhat.com image references to be signed (i.e. requires_terms=true), one repository string per line, e.g. "rhtas/cosign-rhel9". | No       | -             |
+| batchLimit              | size of batch attributes to send to internal-request. As internal request arguments are need to be strings, size here represent maximal string length of `references` and `manifest_digests` sent to internal request                             | Yes      | 4096          |
 
+## Changes in 5.0.4
+* Added batchLimit paramater.
+* Requests for signatures are sent in batch to internal-request instead of one internal request per image + digest.
+* --task-git-* parameters are not passed to internal-* scripts.
 
 ## Changes in 5.0.3
 * Increase `requestTimeout` value to 30 minutes

@@ -107,12 +107,12 @@ spec:
               do
                 params=$(kubectl get internalrequest "${internalRequest}" -o jsonpath="{.spec.params}")
 
-                if [ "$(jq -r '.reference' <<< "${params}")" != "quay.io/testrepo/testimage:tag" ]; then
+                if [ "$(jq -r '.references' <<< "${params}")" != "quay.io/testrepo/testimage:tag" ]; then
                   echo "reference image does not match"
                   exit 1
                 fi
 
-                if [ "$(jq -r '.manifest_digest' <<< "${params}")" != "${testValues[$counter]}" ]; then
+                if [ "$(jq -r '.manifest_digests' <<< "${params}")" != "${testValues[$counter]}" ]; then
                   echo "manifest_digest does not match"
                   exit 1
                 fi
