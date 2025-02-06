@@ -60,7 +60,7 @@ spec:
       description: workspace to read and save files
   steps:
     - name: add-contribution
-      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      image: quay.io/konflux-ci/release-service-utils:0f82be4be43294b6a96846d87ef7f7c0b9e34267
       script: |
         #!/usr/bin/env bash
         #
@@ -137,7 +137,7 @@ spec:
         # The internal-request script will create the InternalRequest and wait until it finishes to get its status
         # If it fails (Failed, Rejected or Timed out) the script will exit and display the reason.
         echo "Creating InternalRequest to add FBC contribution to index image:"
-        internal-request -r "update-fbc-catalog" \
+        internal-request --pipeline "update-fbc-catalog" \
             -p fromIndex="$(params.fromIndex)" \
             -p targetIndex="${target_index}" \
             -p fbcFragment="${fbc_fragment}" \
@@ -152,8 +152,8 @@ spec:
             -l ${pipelinerun_label}="$(params.pipelineRunUid)" \
             -t "${request_timeout_seconds}" |tee "$(workspaces.data.path)"/ir-"$(context.taskRun.uid)"-output.log
 
-        internalRequest=$(awk 'NR==1{ print $2 }' "$(workspaces.data.path)"/ir-"$(context.taskRun.uid)"-output.log | \
-        xargs)
+        internalRequest=$(awk -F"'" '/created/ { print $2 }' \
+          "$(workspaces.data.path)"/ir-"$(context.taskRun.uid)"-output.log)
         echo "done (${internalRequest})"
 
         # Fetching InternalRequest status and populating results

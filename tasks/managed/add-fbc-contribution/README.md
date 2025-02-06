@@ -17,6 +17,10 @@ Task to create a internalrequest to add fbc contributions to index images
 
 ## Changes in 4.0.0
 * Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
+* The pipeline is called via git resolver now instead of cluster resolver
+  * This was done by changing from `-r` to `--pipeline` in the `internal-request` call
+  * The base image was updated to include this new functionality
+* Updated logic to determine InternalRequest name more reliably
 
 ## Changes in 3.4.3
 * Change internal request pipeline from `iib` to `update-fbc-catalog`
