@@ -3,7 +3,7 @@ set -x
 
 # seed for the build status
 yq -o json <<< '
-items: 
+items:
 - id: 1
   distribution_scope: "stage"
   fbc_fragment: "registry.io/image0@sha256:0000"
@@ -117,7 +117,10 @@ function skopeo() {
 
     shift
     if [[ "$*" == "--raw docker://registry-proxy-stage.engineering.redhat.com/rh-osbs-stage/iib:1" ]]; then
-        echo '{"manifests": [ { "mediaType": "application/vnd.docker.distribution.manifest.v2+json", "digest": "sha256:000" }]}'
+        echo '{"manifests": ['
+        echo '{ "mediaType": "application/vnd.docker.distribution.manifest.v2+json", "digest": "sha256:000" },'
+        echo '{ "mediaType": "application/vnd.docker.distribution.manifest.v2+json", "digest": "sha256:001" }'
+        echo ']}'
     fi
 
     if [[ "$*" == "--config docker://registry-proxy-stage.engineering.redhat.com/rh-osbs-stage/iib@sha256:0000" ]]; then

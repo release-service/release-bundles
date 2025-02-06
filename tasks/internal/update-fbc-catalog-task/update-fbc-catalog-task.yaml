@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: update-fbc-catalog-task
   labels:
-    app.kubernetes.io/version: "1.0.1"
+    app.kubernetes.io/version: "1.0.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -297,7 +297,8 @@ spec:
             #
             indexImageDigests=$(echo "${indexImageDigestsRaw}" | \
                jq -r \
-               '.manifests[]? | select(.mediaType=="application/vnd.docker.distribution.manifest.v2+json") | .digest')
+               '.manifests[]? | select(.mediaType=="application/vnd.docker.distribution.manifest.v2+json") | .digest' \
+               | tr '\n' ' ' | sed 's/ $//')  # make sure the result is on one line and remove trailing space
             echo -n "${indexImageDigests}" > "$(results.indexImageDigests.path)"
             if [ -z "${indexImageDigests}" ] ; then
               echo "Index image produced is not multi-arch with a manifest list"

@@ -31,7 +31,7 @@ spec:
           value: $(tasks.run-task.results.buildState)
         - name: genericResult
           value: $(tasks.run-task.results.genericResult)
-        - name: indexImageDigests 
+        - name: indexImageDigests
           value: $(tasks.run-task.results.indexImageDigests)
         - name: iibLog
           value: $(tasks.run-task.results.iibLog)
@@ -86,7 +86,7 @@ spec:
                 exit 1
               fi
 
-              if [ "$(params.indexImageDigests)" != "sha256:000" ]; then
+              if [ "$(params.indexImageDigests)" != "sha256:000 sha256:001" ]; then
                 echo "The task did not save a valid digest image in the indexImageDigests result"
                 exit 1
               fi
