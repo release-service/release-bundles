@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: add-fbc-contribution
   labels:
-    app.kubernetes.io/version: "3.4.3"
+    app.kubernetes.io/version: "4.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -30,6 +30,12 @@ spec:
     - name: resultsDirPath
       type: string
       description: Path to the results directory in the data workspace
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   results:
     - name: buildTimestamp
       description: Build timestamp used in the tag
@@ -141,6 +147,8 @@ spec:
             -p addArches="${add_arches}" \
             -p hotfix="${hotfix}" \
             -p stagedIndex="${staged_index}" \
+            -p taskGitUrl="$(params.taskGitUrl)" \
+            -p taskGitRevision="$(params.taskGitRevision)" \
             -l ${pipelinerun_label}="$(params.pipelineRunUid)" \
             -t "${request_timeout_seconds}" |tee "$(workspaces.data.path)"/ir-"$(context.taskRun.uid)"-output.log
 

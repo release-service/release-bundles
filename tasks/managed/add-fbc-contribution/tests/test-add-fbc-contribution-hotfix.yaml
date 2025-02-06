@@ -62,6 +62,10 @@ spec:
           value: data.json
         - name: resultsDirPath
           value: results
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -106,6 +110,16 @@ spec:
               if [ "$(jq -r '.hotfix' <<< "${requestParams}")" != "true" ]
               then
                 echo "hotfix does not match"
+                exit 1
+              fi
+
+              if [ "$(jq -r '.taskGitUrl' <<< "${requestParams}")" != "http://localhost" ]; then
+                echo "taskGitUrl image does not match"
+                exit 1
+              fi
+
+              if [ "$(jq -r '.taskGitRevision' <<< "${requestParams}")" != "main" ]; then
+                echo "taskGitRevision image does not match"
                 exit 1
               fi
 

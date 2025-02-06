@@ -48,10 +48,24 @@ spec:
     - name: buildTimeoutSeconds
       type: string
       description: IIB Build Service timeout seconds
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+      default: https://github.com/konflux-ci/release-service-catalog.git
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
   tasks:
     - name: update-fbc-catalog-task
       taskRef:
-        name: update-fbc-catalog-task
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: tasks/internal/update-fbc-catalog-task/update-fbc-catalog-task.yaml
       params:
         - name: iibServiceAccountSecret
           value: $(params.iibServiceAccountSecret)

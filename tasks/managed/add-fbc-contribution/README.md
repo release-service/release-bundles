@@ -4,14 +4,19 @@ Task to create a internalrequest to add fbc contributions to index images
 
 ## Parameters
 
-| Name           | Description                                                                               | Optional | Default value        |
-|----------------|-------------------------------------------------------------------------------------------|----------|----------------------|
-| snapshotPath   | Path to the JSON string of the mapped Snapshot spec in the data workspace                 | No       | -                    |
-| dataPath       | Path to the JSON string of the merged data to use in the data workspace                   | No       | -                    |
-| fromIndex      | fromIndex value updated by update-ocp-tag task                                            | No       | -                    |
-| pipelineRunUid | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                    |
-| targetIndex    | targetIndex value updated by update-ocp-tag task                                          | No       | -                    |
-| resultsDirPath | Path to results directory in the data workspace                                           | No       | -                    |
+| Name            | Description                                                                               | Optional | Default value        |
+|-----------------|-------------------------------------------------------------------------------------------|----------|----------------------|
+| snapshotPath    | Path to the JSON string of the mapped Snapshot spec in the data workspace                 | No       | -                    |
+| dataPath        | Path to the JSON string of the merged data to use in the data workspace                   | No       | -                    |
+| fromIndex       | fromIndex value updated by update-ocp-tag task                                            | No       | -                    |
+| pipelineRunUid  | The uid of the current pipelineRun. Used as a label value when creating internal requests | No       | -                    |
+| targetIndex     | targetIndex value updated by update-ocp-tag task                                          | No       | -                    |
+| resultsDirPath  | Path to results directory in the data workspace                                           | No       | -                    |
+| taskGitUrl      | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -                    |
+| taskGitRevision | The revision in the taskGitUrl repo to be used                                            | No       | -                    |
+
+## Changes in 4.0.0
+* Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 
 ## Changes in 3.4.3
 * Change internal request pipeline from `iib` to `update-fbc-catalog`

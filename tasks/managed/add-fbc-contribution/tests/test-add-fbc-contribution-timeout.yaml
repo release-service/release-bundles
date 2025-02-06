@@ -61,6 +61,10 @@ spec:
           value: data.json
         - name: resultsDirPath
           value: results
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
       workspaces:
         - name: data
           workspace: tests-workspace

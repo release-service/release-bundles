@@ -19,6 +19,9 @@ Tekton release pipeline to interact with FBC Pipeline
 | taskGitUrl                      | The url to the git repo where the release-service-catalog tasks to be used are stored                    | Yes       | https://github.com/konflux-ci/release-service-catalog.git |
 | taskGitRevision                 | The revision in the taskGitUrl repo to be used                                                           | No        | -                                                               |
 
+## Changes in 4.2.2
+* Pass taskGitUrl and taskGitRevision to add-fbc-contribution-to-index-image task
+
 ## Changes in 4.2.1
 * Pass taskGitUrl and taskGitRevision to publish-index-image task
 
