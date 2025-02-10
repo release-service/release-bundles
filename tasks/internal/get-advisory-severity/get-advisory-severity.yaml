@@ -1,0 +1,146 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: get-advisory-severity
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: |
+      This task gets the advisory severity. It does this by querying OSIDB for each CVE present in the
+      releaseNotesImages. For each CVE, the overall impact it is looked at. If the OSIDB entry lists an
+      impact for the specific affected component, that is used instead of the overall impact. The highest
+      impact from all of the CVEs is returned as a task result.
+  params:
+    - name: releaseNotesImages
+      type: string
+      description: Json array of image specific details for the advisory
+    - name: internalRequestPipelineRunName
+      type: string
+      description: name of the PipelineRun that called this task
+  results:
+    - name: result
+      description: Success if the task succeeds, the error otherwise
+    - name: severity
+      description: The advisory severity level
+    - name: internalRequestPipelineRunName
+      description: Name of the PipelineRun that called this task
+    - name: internalRequestTaskRunName
+      description: Name of this Task Run to be made available to caller
+  steps:
+    - name: get-advisory-severity
+      image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+      env:
+        - name: SERVICE_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: osidb-service-account
+              key: name
+        - name: SERVICE_ACCOUNT_KEYTAB
+          valueFrom:
+            secretKeyRef:
+              name: osidb-service-account
+              key: base64_keytab
+        - name: OSIDB_URL
+          valueFrom:
+            secretKeyRef:
+              name: osidb-service-account
+              key: osidb_url
+        - name: IMAGES
+          value: $(params.releaseNotesImages)
+      script: |
+          #!/usr/bin/env bash
+          set -eo pipefail
+
+          STDERR_FILE=/tmp/stderr.txt
+          echo -n "$(params.internalRequestPipelineRunName)" > "$(results.internalRequestPipelineRunName.path)"
+          echo -n "$(context.taskRun.name)" > "$(results.internalRequestTaskRunName.path)"
+
+          # shellcheck disable=SC2317 # shellcheck calls all the commands in exitfunc unreachable because it is called
+          # via trap
+          exitfunc() {
+              local err="$1"
+              local line="$2"
+              local command="$3"
+              if [ "$err" -eq 0 ] ; then
+                  echo -n "Success" > "$(results.result.path)"
+              else
+                  echo -n \
+                    "$0: ERROR '$command' failed at line $line - exited with status $err" > "$(results.result.path)"
+                  if [ -f "$STDERR_FILE" ] ; then
+                      tail -n 20 "$STDERR_FILE" >> "$(results.result.path)"
+                  fi
+              fi
+              exit 0 # exit the script cleanly as there is no point in proceeding past an error or exit call
+          }
+          # due to set -e, this catches all EXIT and ERR calls and the task should never fail with nonzero exit code
+          trap 'exitfunc $? $LINENO "$BASH_COMMAND"' EXIT
+
+          echo -n "" > "$(results.severity.path)"
+
+          # write keytab to file
+          echo -n "${SERVICE_ACCOUNT_KEYTAB}" | base64 --decode > /tmp/keytab
+          # workaround kinit: Invalid UID in persistent keyring name while getting default ccache
+          KRB5CCNAME=$(mktemp)
+          export KRB5CCNAME
+          KRB5_CONFIG=$(mktemp)
+          export KRB5_CONFIG
+          export KRB5_TRACE=/dev/stderr
+          sed '/\[libdefaults\]/a\    dns_canonicalize_hostname = false' /etc/krb5.conf > "${KRB5_CONFIG}"
+          kinit "${SERVICE_ACCOUNT_NAME}" -k -t /tmp/keytab
+
+          INCLUDE_FIELDS="cve_id,impact,affects.ps_component,affects.impact"
+          ADVISORY_SEVERITY=""
+
+          get_higher_severity() { # Return higher sev of the two provided [current highest, new]
+              if [ "$1" == "CRITICAL" ] || [ "$2" == "CRITICAL" ] ; then
+                  echo "CRITICAL"
+              elif [ "$1" == "IMPORTANT" ] || [ "$2" == "IMPORTANT" ] ; then
+                  echo "IMPORTANT"
+              elif [ "$1" == "MODERATE" ] || [ "$2" == "MODERATE" ] ; then
+                  echo "MODERATE"
+              elif [ "$1" == "LOW" ] || [ "$2" == "LOW" ] ; then
+                  echo "LOW"
+              else
+                  # To get here, the one we are comparing against is an invalid value, so just
+                  # return $1, which is the current highest severity
+                  echo "$1"
+              fi
+          }
+
+          NUM_IMAGES=$(jq '.[] | length' <<< "${IMAGES}")
+          for ((i = 0; i < NUM_IMAGES; i++)); do
+              image=$(jq -c --argjson i "$i" '.[$i]' <<< "${IMAGES}")
+              component=$(jq -r '.component' <<< "$image")
+              NUM_CVES=$(jq '.cves.fixed | length' <<< "$image")
+              for ((j = 0; j < NUM_CVES; j++)); do
+                  cve=$(jq -r --argjson j "$j" '.cves.fixed | to_entries[$j].key' <<< "${image}")
+                  echo "Checking CVE ${cve} for component ${component}"
+                  # Get token. They are short lived, so get one for before each request
+                  TOKEN=$(curl --retry 3 --negotiate -u : "${OSIDB_URL}"/auth/token | jq -r '.access')
+                  OUTPUT=$(curl --retry 3 -H 'Content-Type: application/json' -H "Authorization: Bearer ${TOKEN}" \
+                      "${OSIDB_URL}/osidb/api/v1/flaws?cve_id=${cve}&include_fields=${INCLUDE_FIELDS}" \
+                      | jq '.results[0]')
+                  IMPACT=$(jq -r '.impact' <<< "$OUTPUT")
+                  # If there is a component specific impact, use that instead
+                  if PS_COMP=$(jq -e --arg comp "$component" '.affects[] | select(.ps_component==$comp)' <<< "$OUTPUT")
+                  then
+                      IMPACT=$(jq -r --arg default "$IMPACT" '.impact // $default' <<< "$PS_COMP")
+                  fi
+                  ADVISORY_SEVERITY=$(get_higher_severity "$ADVISORY_SEVERITY" "$IMPACT")
+              done
+          done
+
+          if [ -z "$ADVISORY_SEVERITY" ] ; then
+              echo "Unable to find severity on any cve listed in the releaseNotes" | tee "$STDERR_FILE"
+              exit 1
+          fi
+
+          # Change from all caps to just first letter capitalized
+          ADVISORY_SEVERITY="${ADVISORY_SEVERITY,,}"
+          ADVISORY_SEVERITY="${ADVISORY_SEVERITY^}"
+          echo -n "$ADVISORY_SEVERITY" > "$(results.severity.path)"
+          exit 0

@@ -1,0 +1,80 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-set-advisory-severity-ir-failure
+  annotations:
+    test/assert-task-failure: "run-task"
+spec:
+  description: |
+    Test with the InternalRequest failing to ensure task fails. The mocks make the InternalRequest
+    fail if the releaseNotes.content.images contains the string CVE-999
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              cat > "$(workspaces.data.path)/data.json" << EOF
+              {
+                "releaseNotes": {
+                  "type": "RHSA",
+                  "content": {
+                    "images": [
+                      {
+                        "containerImage": "foo",
+                        "cves": {
+                          "fixed": {
+                            "CVE-123": {
+                              "components": [
+                                "pkg:rpm/foo"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "containerImage": "bar",
+                        "cves": {
+                          "fixed": {
+                            "CVE-999": {
+                              "components": [
+                                "pkg:rpm/bar"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              EOF
+    - name: run-task
+      taskRef:
+        name: set-advisory-severity
+      params:
+        - name: dataPath
+          value: data.json
+        - name: pipelineRunUid
+          value: $(context.pipelineRun.uid)
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup

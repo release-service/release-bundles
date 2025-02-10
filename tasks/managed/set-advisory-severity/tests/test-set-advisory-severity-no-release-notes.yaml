@@ -1,0 +1,46 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-set-advisory-severity-no-release-notes
+spec:
+  description: Test for set-advisory-severity where the data JSON has no releaseNotes key. The task should succeed
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              cat > "$(workspaces.data.path)"/data.json << EOF
+              {
+                "foo": "bar"
+              }
+              EOF
+    - name: run-task
+      taskRef:
+        name: set-advisory-severity
+      params:
+        - name: dataPath
+          value: data.json
+        - name: pipelineRunUid
+          value: $(context.pipelineRun.uid)
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup

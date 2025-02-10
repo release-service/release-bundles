@@ -1,0 +1,95 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: test-set-advisory-severity
+spec:
+  description: |
+    Test that the task sets the releaseNotes.severity to IMPORTANT, which is what the mocks have the
+    InternalRequest return when called with anything but CVE-999
+  workspaces:
+    - name: tests-workspace
+  tasks:
+    - name: setup
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: setup-values
+            image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
+            script: |
+              #!/usr/bin/env sh
+              set -eux
+
+              cat > "$(workspaces.data.path)/data.json" << EOF
+              {
+                "releaseNotes": {
+                  "type": "RHSA",
+                  "content": {
+                    "images": [
+                      {
+                        "containerImage": "foo",
+                        "cves": {
+                          "fixed": {
+                            "CVE-123": {
+                              "components": [
+                                "pkg:rpm/foo"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "containerImage": "bar",
+                        "cves": {
+                          "fixed": {
+                            "CVE-555": {
+                              "components": [
+                                "pkg:rpm/bar"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              EOF
+    - name: run-task
+      taskRef:
+        name: set-advisory-severity
+      params:
+        - name: dataPath
+          value: data.json
+        - name: pipelineRunUid
+          value: $(context.pipelineRun.uid)
+        - name: taskGitUrl
+          value: "http://localhost"
+        - name: taskGitRevision
+          value: "main"
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - setup
+    - name: check-result
+      workspaces:
+        - name: data
+          workspace: tests-workspace
+      runAfter:
+        - run-task
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: check-result
+            image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
+            script: |
+              #!/usr/bin/env bash
+              set -ex
+
+              test "$(jq -r '.releaseNotes.severity' "$(workspaces.data.path)/data.json")" == "IMPORTANT"

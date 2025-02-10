@@ -1,0 +1,90 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: set-advisory-severity
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: release
+spec:
+  description: >
+    Tekton task to set the severity level in the releaseNotes key of the data.json. It will
+    use an InternalRequest to query OSIDB for each CVE present. If the type is not RHSA, no
+    action will be performed.
+  params:
+    - name: dataPath
+      description: Path to the JSON string of the merged data to use in the data workspace
+      type: string
+    - name: requestTimeout
+      type: string
+      default: "180"
+      description: InternalRequest timeout
+    - name: pipelineRunUid
+      type: string
+      description: The uid of the current pipelineRun. Used as a label value when creating internal requests
+    - name: taskGitUrl
+      type: string
+      description: The url to the git repo where the release-service-catalog tasks to be used are stored
+    - name: taskGitRevision
+      type: string
+      description: The revision in the taskGitUrl repo to be used
+  workspaces:
+    - name: data
+      description: The workspace where the snapshot spec json file resides
+  steps:
+    - name: set-severity
+      image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
+      script: |
+        #!/usr/bin/env bash
+        set -x
+
+        DATA_FILE="$(workspaces.data.path)/$(params.dataPath)"
+        if [ ! -f "${DATA_FILE}" ] ; then
+            echo "No data JSON was provided."
+            exit 1
+        fi
+
+        if [[ "$(jq -r '.releaseNotes.type' "${DATA_FILE}")" != "RHSA" ]] ; then
+            echo "Advisory is not of type RHSA. Not setting severity"
+            exit 0
+        fi
+
+        PIPELINERUN_LABEL="internal-services.appstudio.openshift.io/pipelinerun-uid"
+
+        RELEASENOTESIMAGES=$(jq -c '.releaseNotes.content.images' "${DATA_FILE}")
+
+        IR_FILE="$(workspaces.data.path)/$(context.task.name)/ir-result.txt"
+        mkdir -p "$(dirname "$IR_FILE")"
+
+        internal-request --pipeline "get-advisory-severity" \
+            -p releaseNotesImages="${RELEASENOTESIMAGES}" \
+            -p taskGitUrl="$(params.taskGitUrl)" \
+            -p taskGitRevision="$(params.taskGitRevision)" \
+            -l ${PIPELINERUN_LABEL}="$(params.pipelineRunUid)" \
+            -t "$(params.requestTimeout)" \
+            -s true \
+            > "$IR_FILE" || \
+            (grep "^\[" "$IR_FILE" | jq . && exit 1)
+
+        internalRequest=$(awk -F"'" '/created/ { print $2 }' "$IR_FILE")
+        echo "done (${internalRequest})"
+
+        results=$(kubectl get internalrequest "$internalRequest" -o=jsonpath='{.status.results}')
+        internalRequestPipelineRunName="$(jq -jr '.internalRequestPipelineRunName // ""' <<< "${results}")"
+        internalRequestTaskRunName="$(jq -jr '.internalRequestTaskRunName // ""' <<< "${results}")"
+
+        echo "** internalRequestPipelineRunName: ${internalRequestPipelineRunName}"
+        echo "** internalRequestTaskRunName: ${internalRequestTaskRunName}"
+
+        if [[ "$(echo "${results}" | jq -r '.result')" == "Success" ]]; then
+          SEVERITY=$(jq -r '.severity' <<< "$results")
+          echo "Setting severity to $SEVERITY"
+          jq --arg sev "$SEVERITY" '.releaseNotes.severity = $sev' "${DATA_FILE}" > /tmp/data.tmp \
+            && mv /tmp/data.tmp "${DATA_FILE}"
+        else
+          echo "The InternalRequest to find the severity was unsuccessful"
+          jq -r '.result' <<< "$results"
+          exit 1
+        fi
