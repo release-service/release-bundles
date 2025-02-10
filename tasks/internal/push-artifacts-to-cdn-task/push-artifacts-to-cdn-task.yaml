@@ -93,9 +93,29 @@ spec:
   results:
     - name: result
       description: Success if the task succeeds, the error otherwise
+    - name: signedMacDigest
+      description: Digest for signed Mac files
+    - name: unsignedMacDigest
+      description: Digest for unsigned Mac files
+    - name: signedWindowsDigest
+      description: Digest from signed Windows files
+    - name: unsignedWindowsDigest
+      description: Digest from unsigned Windows files
   volumes:
     - name: shared-dir
       emptyDir: {}
+    - name: mac-ssh-key-vol
+      secret:
+        secretName: mac-ssh-key-secret
+    - name: windows-ssh-key-vol
+      secret:
+        secretName: windows-ssh-key-secret
+    - name: checksum-fingerprint-vol
+      secret:
+        secretName: checksum-fingerprint-secret
+    - name: checksum-keytab-vol
+      secret:
+        secretName: checksum-keytab-secret
   steps:
     - name: extract-artifacts
       image: quay.io/konflux-ci/release-service-utils:7835e32b1974f956a6c942e24adbc79705cab12e
@@ -145,6 +165,7 @@ spec:
         mkdir -p "$DISK_IMAGE_DIR"
 
         process_component() { # Expected argument is [component json]
+            set -x
             COMPONENT=$1
             PULLSPEC=$(jq -er '.containerImage' <<< "${COMPONENT}")
             DESTINATION="${DISK_IMAGE_DIR}/$(jq -er '.staged.destination' <<< "${COMPONENT}")/FILES" \
@@ -220,6 +241,12 @@ spec:
 
         STDERR_FILE=/tmp/stderr.txt
 
+        # Check if the previous step finished successfully. If not, stop here.
+        if [ "$(cat "$(results.result.path)")" != "Success" ]; then
+          echo "Previous step failed. Exiting..."
+          exit 0
+        fi
+
         exitfunc() {
             local err=$1
             local line=$2
@@ -239,6 +266,7 @@ spec:
         trap 'exitfunc $? $LINENO "$BASH_COMMAND"' EXIT
 
         CONTENT_DIR=/shared/artifacts
+        find $CONTENT_DIR
         UNSIGNED_DIR=$CONTENT_DIR/unsigned
         MAC_CONTENT=$UNSIGNED_DIR/macos
         WINDOWS_CONTENT=$UNSIGNED_DIR/windows
@@ -248,7 +276,7 @@ spec:
         cd "$CONTENT_DIR"
 
         # Loop through each gz file and move them to the appropriate directory
-        for file in *.gz; do
+        find "$CONTENT_DIR" -type f -iregex ".*\.zip\|.*\.gz" 2>/dev/null | while read -r file; do
           case "$file" in
             (*darwin*)
               mv "$file" unsigned/macos/
@@ -264,16 +292,27 @@ spec:
 
         # Unzip files in each directory
         for dir in unsigned/macos unsigned/windows linux; do
-          for file in "$dir"/*.gz; do
-            gunzip "$file"
+          find "$dir"/*.{zip,gz} 2>/dev/null | while read -r file; do
+            ext="${file#*.}"
+            case "$ext" in
+              tar.gz)
+                tar -xf "$file"
+              ;;
+              gz)
+                gzip -d "$file"
+              ;;
+              zip)
+                zip -X "$file"
+              ;;
+            esac
           done
         done
 
         cd "$UNSIGNED_DIR"
 
         echo "Logging into Quay..."
-        set +x
-        oras login quay.io -u "${QUAY_USER}" -p "${QUAY_PASS}" > /dev/null 2>&1
+        #set +x
+        oras login quay.io -u "${QUAY_USER}" -p "${QUAY_PASS}" #> /dev/null 2>&1
         set -x
         echo "Pushing unsigned Macos content to $(params.quayURL)..."
         output=$(oras push "$(params.quayURL)/unsigned" macos)
@@ -349,6 +388,12 @@ spec:
         set -eux
 
         STDERR_FILE=/tmp/stderr.txt
+
+        # Check if the previous step finished successfully. If not, stop here.
+        if [ "$(cat "$(results.result.path)")" != "Success" ]; then
+          echo "Previous step failed. Exiting..."
+          exit 0
+        fi
 
         exitfunc() {
             local err=$1
@@ -481,6 +526,12 @@ spec:
 
         STDERR_FILE=/tmp/stderr.txt
 
+        # Check if the previous step finished successfully. If not, stop here.
+        if [ "$(cat "$(results.result.path)")" != "Success" ]; then
+          echo "Previous step failed. Exiting..."
+          exit 0
+        fi
+
         exitfunc() {
             local err=$1
             local line=$2
@@ -607,6 +658,12 @@ spec:
 
         STDERR_FILE=/tmp/stderr.txt
 
+        # Check if the previous step finished successfully. If not, stop here.
+        if [ "$(cat "$(results.result.path)")" != "Success" ]; then
+          echo "Previous step failed. Exiting..."
+          exit 0
+        fi
+
         exitfunc() {
             local err=$1
             local line=$2
@@ -663,6 +720,7 @@ spec:
 
         # get all of the signed binaries into a common directory
         CONTENT_DIR=/shared/artifacts
+        find $CONTENT_DIR
         SIGNED_DIR="$CONTENT_DIR/signed"
         mkdir -p "$SIGNED_DIR"
         mkdir -p "$CONTENT_DIR"/linux
@@ -841,21 +899,22 @@ spec:
             return
           fi
 
+          # using { ;} to avoid subshell
           productName="$(jq -er '.productName' <<< "${contentGatewayConfig}")" \
-            || (echo "Missing contentGateway.productName value for component. This should be an existing product \
-                  in the Developer Portal. Failing" && exit 1)
+            || { echo "Missing contentGateway.productName value for component. This should be an existing product \
+                  in the Developer Portal. Failing" && exit 1; }
 
           productCode="$(jq -er '.productCode' <<< "${contentGatewayConfig}")" \
-            || (echo "Missing contentGateway.productCode value for component. This should be an existing product \
-                  in the Developer Portal. Failing" && exit 1)
+            || { echo "Missing contentGateway.productCode value for component. This should be an existing product \
+                  in the Developer Portal. Failing" && exit 1; }
 
           productVersionName="$(jq -er '.productVersionName' <<< "${contentGatewayConfig}")" \
-            || (echo "Missing contentGateway.productVersionName value for component. This should be an existing \
-                  product in the Developer Portal. Failing" && exit 1)
+            || { echo "Missing contentGateway.productVersionName value for component. This should be an existing \
+                  product in the Developer Portal. Failing" && exit 1; }
 
           filePrefix="$(jq -er '.filePrefix' <<< "${contentGatewayConfig}")" \
-            || (echo "Missing contentGateway.filePrefix value for component. This should be the prefix for files to \
-                  upload to the Developer Portal. Failing" && exit 1)
+            || { echo "Missing contentGateway.filePrefix value for component. This should be the prefix for files to \
+                  upload to the Developer Portal. Failing" && exit 1; }
 
           developer_portal_wrapper --debug --product-name "${productName}" \
             --product-code "${productCode}" \
