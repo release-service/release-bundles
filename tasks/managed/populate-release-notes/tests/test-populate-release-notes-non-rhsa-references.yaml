@@ -5,8 +5,7 @@ metadata:
   name: test-populate-release-notes-non-rhsa-references
 spec:
   description: |
-    Run the populate-release-notes task with a type that is RHSA. Ensure that no additional references
-    are added
+    Run the populate-release-notes task with a type that is not RHSA. Ensure that references are []
   workspaces:
     - name: tests-workspace
   tasks:
@@ -96,6 +95,6 @@ spec:
               #!/usr/bin/env sh
               set -eux
 
-              test "$(jq '.releaseNotes | has("references")' "$(workspaces.data.path)/data.json")" == "false"
+              test "$(jq -c '.releaseNotes.references' "$(workspaces.data.path)/data.json")" == "[]"
       runAfter:
         - run-task

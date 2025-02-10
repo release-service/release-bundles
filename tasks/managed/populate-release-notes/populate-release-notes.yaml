@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: populate-release-notes
   labels:
-    app.kubernetes.io/version: "3.0.0"
+    app.kubernetes.io/version: "3.0.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -154,7 +154,8 @@ spec:
         fi
 
         if [ "$(jq -r '.releaseNotes.type' "${DATA_FILE}")" != "RHSA" ] ; then
-            echo "Type is not RHSA. Not adding references"
+            echo "Type is not RHSA. Ensuring references key exists, but not adding any"
+            jq '.releaseNotes.references += []' "${DATA_FILE}" > /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"
             exit 0
         fi
 

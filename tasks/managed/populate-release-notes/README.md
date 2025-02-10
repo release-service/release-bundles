@@ -12,6 +12,9 @@ path to a file containing data used in component SBOM generation.
 | dataPath     | Path to the JSON string of the merged data to update                 | No       | -             |
 | snapshotPath | Path to the JSON string of the mapped Snapshot in the data workspace | No       | -             |
 
+## Changes in 3.0.1
+* If type is RHBA or RHEA, the task will ensure the `references` key exists (although it will be empty)
+
 ## Changes in 3.0.0
 * Task renamed from `populate-release-notes-images` to `populate-release-notes`
 * Task will now inject references if the `releaseNotes.type` is `RHSA`
