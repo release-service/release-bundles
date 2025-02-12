@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-advisory-task
   labels:
-    app.kubernetes.io/version: "0.11.0"
+    app.kubernetes.io/version: "0.11.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -44,7 +44,7 @@ spec:
       description: The advisory url if the task succeeds, empty string otherwise
   steps:
     - name: create-advisory
-      image: quay.io/konflux-ci/release-service-utils:9089cafbf36bb889b4b73d8c2965613810f13736
+      image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
       env:
         - name: GITLAB_HOST
           valueFrom:

@@ -14,3 +14,7 @@ internal request. The success/failure is handled in the task creating the intern
 | config_map_name      | The name of the configMap that contains the signing key                                                | No       | -             |
 | advisory_secret_name | The name of the secret that contains the advisory creation metadata                                    | No       | -             |
 | errata_secret_name   | The name of the secret that contains the errata service account metadata                               | No       | -             |
+
+## Changes in 0.11.1
+* Update base image
+  * New base image contains a new version of the advisory template that includes severity
