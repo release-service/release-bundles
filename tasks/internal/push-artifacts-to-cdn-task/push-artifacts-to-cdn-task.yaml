@@ -165,9 +165,10 @@ spec:
         mkdir -p "$DISK_IMAGE_DIR"
 
         process_component() { # Expected argument is [component json]
-            set -x
             COMPONENT=$1
-            PULLSPEC=$(jq -er '.containerImage' <<< "${COMPONENT}")
+            PULLSPEC=$(jq -er '.containerImage' <<< "${COMPONENT}") \
+                  || (echo "Missing containerImage for component." && exit 1 )
+
             DESTINATION="${DISK_IMAGE_DIR}/$(jq -er '.staged.destination' <<< "${COMPONENT}")/FILES" \
               || (echo "Missing staged.destination value for component. This should be an existing pulp repo. \
                   Failing" && exit 1)
@@ -182,8 +183,10 @@ spec:
             NUM_MAPPED_FILES=$(jq '.staged.files | length' <<< "${COMPONENT}")
             for ((i = 0; i < NUM_MAPPED_FILES; i++)) ; do
                 FILE=$(jq -c --arg i "$i" '.staged.files[$i|tonumber]' <<< "$COMPONENT")
-                SOURCE=$(jq -er '.source' <<< "$FILE")
-                FILENAME=$(jq -er '.filename' <<< "$FILE")
+                SOURCE=$(jq -er '.source' <<< "$FILE") \
+                  || (echo "Missing staged.files.source for component." && exit 1 )
+                FILENAME=$(jq -er '.filename' <<< "$FILE") \
+                  || (echo "Missing staged.files.filename for component." && exit 1 )
                 # The .qcow2 images are not zipped
                 if [ -f "${SOURCE}.gz" ] ; then
                     gzip -d "${SOURCE}.gz"
@@ -193,8 +196,8 @@ spec:
                 # The race condition is if two files have the same $DESTINATION_FILE and both
                 # if checks are run before either mv is run a few lines below.
                 if [ -f "${DESTINATION_FILE}" ] ; then
-                    echo -n "Multiple files use the same destination value: $DESTINATION" >&2
-                    echo " and filename value: $FILENAME. Failing..." >&2
+                    echo "Multiple files use the same destination value: $DESTINATION" \
+                         "and filename value: $FILENAME. Failing..." >&2
                     exit 1
                 fi
                 mv "$SOURCE" "${DESTINATION_FILE}" || echo "didn't find mapped file: ${SOURCE}"
@@ -720,7 +723,6 @@ spec:
 
         # get all of the signed binaries into a common directory
         CONTENT_DIR=/shared/artifacts
-        find $CONTENT_DIR
         SIGNED_DIR="$CONTENT_DIR/signed"
         mkdir -p "$SIGNED_DIR"
         mkdir -p "$CONTENT_DIR"/linux
@@ -853,10 +855,9 @@ spec:
             if [ "$err" -eq 0 ] ; then
                 echo -n "Success" > "$(results.result.path)"
             else
-                echo "$0: ERROR '$command' failed at line $line - exited with status $err" \
-                  > "$(results.result.path)"
+                echo "$0: ERROR '$command' failed at line $line - exited with status $err" > "$(results.result.path)"
                 if [ -f "$STDERR_FILE" ] ; then
-                    tail -n 20 "$STDERR_FILE" >> "$(results.result.path)"
+                    tail -n 20 "$STDERR_FILE" | tee -a "$(results.result.path)"
                 fi
             fi
             exit 0 # exit the script cleanly as there is no point in proceeding past an error or exit call
@@ -899,22 +900,32 @@ spec:
             return
           fi
 
-          # using { ;} to avoid subshell
-          productName="$(jq -er '.productName' <<< "${contentGatewayConfig}")" \
-            || { echo "Missing contentGateway.productName value for component. This should be an existing product \
-                  in the Developer Portal. Failing" && exit 1; }
+          productName="$(jq -r '.productName' <<< "${contentGatewayConfig}")"
+          if [ "${productName}" == "null" ]; then
+            echo "Missing contentGateway.productName value for component. This should be an existing product" \
+                 "in the Developer Portal. Failing" >&2
+            exit 1
+          fi
+           
+          productCode="$(jq -r '.productCode' <<< "${contentGatewayConfig}")"
+          if [ "${productCode}" == "null" ]; then
+            echo "Missing contentGateway.productCode value for component. This should be an existing product" >&2
+            exit 1
+          fi
 
-          productCode="$(jq -er '.productCode' <<< "${contentGatewayConfig}")" \
-            || { echo "Missing contentGateway.productCode value for component. This should be an existing product \
-                  in the Developer Portal. Failing" && exit 1; }
+          productVersionName="$(jq -r '.productVersionName' <<< "${contentGatewayConfig}")"
+          if [ "${productVersionName}" == "null" ]; then
+            echo "Missing contentGateway.productVersionName value for component. This should be an existing" \
+                  "product in the Developer Portal. Failing" >&2
+            exit 1
+          fi
 
-          productVersionName="$(jq -er '.productVersionName' <<< "${contentGatewayConfig}")" \
-            || { echo "Missing contentGateway.productVersionName value for component. This should be an existing \
-                  product in the Developer Portal. Failing" && exit 1; }
-
-          filePrefix="$(jq -er '.filePrefix' <<< "${contentGatewayConfig}")" \
-            || { echo "Missing contentGateway.filePrefix value for component. This should be the prefix for files to \
-                  upload to the Developer Portal. Failing" && exit 1; }
+          filePrefix="$(jq -r '.filePrefix' <<< "${contentGatewayConfig}")"
+          if [ "${filePrefix}" == "null" ]; then
+            echo "Missing contentGateway.filePrefix value for component. This should be the prefix for files to" \
+                 "upload to the Developer Portal. Failing" >&2
+            exit 1
+          fi
 
           developer_portal_wrapper --debug --product-name "${productName}" \
             --product-code "${productCode}" \
@@ -966,5 +977,6 @@ spec:
         NUM_COMPONENTS=$(jq '.components | length' <<< "$SNAPSHOT_JSON")
         for ((i = 0; i < NUM_COMPONENTS; i++)) ; do
             COMPONENT=$(jq -c --arg i "$i" '.components[$i|tonumber]' <<< "$SNAPSHOT_JSON")
-            process_component_for_developer_portal "$COMPONENT" "${component_destinations[$i]}"  2> "$STDERR_FILE"
+            # eventually the function does not redirect the error to stderr, so looking for all output
+            process_component_for_developer_portal "$COMPONENT" "${component_destinations[$i]}" 2> "$STDERR_FILE"
         done
