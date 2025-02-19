@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-advisory-task
   labels:
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.12.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -37,11 +37,18 @@ spec:
     - name: errata_secret_name
       type: string
       description: The name of the secret that contains the errata service account metadata
+    - name: internalRequestPipelineRunName
+      type: string
+      description: Name of the PipelineRun that called this task
   results:
     - name: result
       description: Success if the task succeeds, the error otherwise
     - name: advisory_url
       description: The advisory url if the task succeeds, empty string otherwise
+    - name: internalRequestPipelineRunName
+      description: Name of the PipelineRun that called this task
+    - name: internalRequestTaskRunName
+      description: Name of this Task Run to be made available to caller
   steps:
     - name: create-advisory
       image: quay.io/konflux-ci/release-service-utils:0b2f257d7a5c2a881c36c23f8ae3cd5e89db593a
@@ -95,6 +102,10 @@ spec:
           #!/usr/bin/env bash
           set -eo pipefail
 
+          STDERR_FILE=/tmp/stderr.txt
+          echo -n "$(params.internalRequestPipelineRunName)" > "$(results.internalRequestPipelineRunName.path)"
+          echo -n "$(context.taskRun.name)" > "$(results.internalRequestTaskRunName.path)"
+
           exitfunc() {
               local err=$1
               local line=$2
@@ -104,6 +115,9 @@ spec:
               else
                   echo -n \
                     "$0: ERROR '$command' failed at line $line - exited with status $err" > "$(results.result.path)"
+                  if [ -f "$STDERR_FILE" ] ; then
+                      tail -n 20 "$STDERR_FILE" >> "$(results.result.path)"
+                  fi
               fi
               echo -n "${ADVISORY_URL}" > "$(results.advisory_url.path)"
               exit 0 # exit the script cleanly as there is no point in proceeding past an error or exit call
@@ -166,12 +180,12 @@ spec:
             --template /home/templates/advisory.yaml.jinja
 
           # Ensure the created advisory file passes the advisory schema
-          check-jsonschema --schemafile schema/advisory.json "$ADVISORY_FILEPATH"
+          check-jsonschema --schemafile schema/advisory.json "$ADVISORY_FILEPATH" 2> "$STDERR_FILE"
 
           git add "${ADVISORY_FILEPATH}"
           git commit -m "[Konflux Release] new advisory for $(params.application)"
           echo "Pushing to ${REPO_BRANCH}..."
-          git_push_with_retries --branch $REPO_BRANCH --retries 5 --url origin
+          git_push_with_retries --branch $REPO_BRANCH --retries 5 --url origin 2> "$STDERR_FILE"
           # Construct the advisory url to report back to the user as a result
           # Note: This currently only supports gitlab repos, which is all we expect for now
           ADVISORY_URL="${GIT_REPO//\.git/}/-/blob/${REPO_BRANCH}/${ADVISORY_FILEPATH}"
