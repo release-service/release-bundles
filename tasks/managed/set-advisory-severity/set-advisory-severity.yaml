@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: set-advisory-severity
   labels:
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.1.1"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -48,6 +48,10 @@ spec:
 
         if [[ "$(jq -r '.releaseNotes.type' "${DATA_FILE}")" != "RHSA" ]] ; then
             echo "Advisory is not of type RHSA. Not setting severity"
+            if [ "$(jq '.releaseNotes | has("severity")' "${DATA_FILE}")" == "true" ] ; then
+              echo "User provided severity key for non RHSA advisory. Removing it"
+              jq 'del(.releaseNotes.severity)' "${DATA_FILE}" > /tmp/data.tmp && mv /tmp/data.tmp "${DATA_FILE}"
+            fi
             exit 0
         fi
 
