@@ -38,7 +38,7 @@ spec:
     - name: collectorsRepositoryRevision
       type: string
       description: Git repository revision
-      default: main
+      default: development
     - name: taskGitUrl
       type: string
       description: The url to the git repo where the release-service-catalog tasks to be used are stored
