@@ -48,6 +48,7 @@ spec:
 
         execute_collector() { # Expected arguments are [collector json, type of collector]
             collector="$1"
+            collector_type="$2"
             name="$(jq -r '.name' <<< "$collector")"
             type="$(jq -r '.type' <<< "$collector")"
             TIMEOUT="$(jq -r --arg default "$DEFAULT_TIMEOUT" '.timeout // $default' <<< "$collector")"
@@ -60,7 +61,7 @@ spec:
                 ARGS=("${ARGS[@]}" --"${arg_name}" "${arg_value}")
             done
             # Execute collector
-            timeout "$TIMEOUT" python3 "lib/${type}.py" "${ARGS[@]}" | tee "$RESULTS_DIR"/"$2"-"$name".json
+            timeout "$TIMEOUT" python3 "lib/${type}.py" "${ARGS[@]}" "${collector_type}" | tee "$RESULTS_DIR"/"$2"-"$name".json
         }
 
         if [ ! -d "${RESULTS_DIR}" ] ; then
