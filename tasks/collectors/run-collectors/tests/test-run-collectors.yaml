@@ -30,7 +30,7 @@ spec:
                 },
                 "spec": {
                   "application": "app",
-                  "collectors":
+                  "collectors": {
                     "items": [
                       {
                         "name": "test-collector",
@@ -43,9 +43,9 @@ spec:
                           }
                         ]
                       }
-                    }
-                  ],
-                  "target": "managed"
+                    ],
+                    "target": "managed"
+                  }
                 }
               }
               EOF
