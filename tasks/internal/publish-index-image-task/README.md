@@ -1,6 +1,6 @@
 # publish-index-image-task
 
-Tekton task to publish a built FBC index image using skopeo: test
+Tekton task to publish a built FBC index image using skopeo
 
 ## Parameters
 

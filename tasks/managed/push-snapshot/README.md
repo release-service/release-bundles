@@ -1,4 +1,4 @@
-# push-snapshot
+# push-snapshot-test
 
 Tekton task to push snapshot images to an image registry using `cosign copy`.
 
