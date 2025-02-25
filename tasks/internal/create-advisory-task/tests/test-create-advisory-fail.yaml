@@ -35,6 +35,8 @@ spec:
           value: "create-advisory-secret"
         - name: errata_secret_name
           value: "create-advisory-errata-secret"
+        - name: internalRequestPipelineRunName
+          value: $(context.pipelineRun.name)
     - name: check-result
       runAfter:
         - run-task

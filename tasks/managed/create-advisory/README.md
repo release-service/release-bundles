@@ -20,6 +20,9 @@ Only all `redhat-pending` or all `redhat-prod` repositories may be specified in 
 | taskGitUrl               | The url to the git repo where the release-service-catalog tasks to be used are stored     | No       | -                           |
 | taskGitRevision          | The revision in the taskGitUrl repo to be used                                            | No       | -                           |
 
+## Changes in 5.1.0
+* Echo the internalRequestPipelineRunName and internalRequestTaskRunName in the log to help with debugging
+
 ## Changes in 5.0.0
 * Added taskGiturl and taskGitRevision parameters to be passed to the internalRequest
 * The pipeline is called via git resolver now instead of cluster resolver
