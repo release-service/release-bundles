@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: push-snapshot
   labels:
-    app.kubernetes.io/version: "6.4.2"
+    app.kubernetes.io/version: "6.4.3"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -168,7 +168,7 @@ spec:
             sourceContainer="${source_repo}:${source_tag}"
             # Check if the source container exists
             source_container_digest=$(oras resolve --registry-config "$SOURCE_AUTH_FILE" \
-              "${sourceContainer}" "${oras_args[@]}")
+              "${sourceContainer}")
 
             if [ -z "$source_container_digest" ] ; then
               echo "Error: Source container ${sourceContainer} not found!"

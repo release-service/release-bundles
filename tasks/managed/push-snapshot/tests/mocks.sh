@@ -37,8 +37,12 @@ function skopeo() {
   echo Mock skopeo called with: $* >&2
   echo $* >> "$(workspaces.data.path)"/mock_skopeo.txt
 
-  if [[ "$*" == "inspect --raw docker://"* ]]
-  then
+  if [[ "$*" == "inspect --raw docker://registry.io/multiarch-test@sha256:xyz789" ]]; then
+    # Multi-arch behavior for our new test
+    echo '{"mediaType": "application/vnd.oci.image.index.v1+json", "manifests": [{"platform":{"os":"linux","architecture":"arm64"}}, {"platform":{"os":"linux","architecture":"amd64"}}]}'
+    return
+  elif [[ "$*" == "inspect --raw docker://"* ]]; then
+    # Original behavior for all other tests
     echo '{"mediaType": "my_media_type"}'
     return
   fi
@@ -49,8 +53,15 @@ function skopeo() {
 }
 
 function get-image-architectures() {
+  if [[ "$1" == "registry.io/multiarch-test@sha256:xyz789" ]]; then
+    # Multi-arch behavior for our new test, prioritizing arm64
+    echo '{"platform":{"architecture": "arm64", "os": "linux"}, "digest": "xyz789"}'
+    echo '{"platform":{"architecture": "amd64", "os": "linux"}, "digest": "deadbeef"}'
+  else
+    # Original behavior for all other tests
     echo '{"platform":{"architecture": "amd64", "os": "linux"}, "digest": "abcdefg"}'
     echo '{"platform":{"architecture": "ppc64le", "os": "linux"}, "digest": "deadbeef"}'
+  fi
 }
 
 function select-oci-auth() {
@@ -59,9 +70,14 @@ function select-oci-auth() {
 
 function oras() {
   echo $* >> "$(workspaces.data.path)"/mock_oras.txt
-  if [[ "$*" == "resolve --registry-config "*" "* ]]
-  then
-    if [[ "$4" == *skip-image*.src || "$4" == *skip-image*-source ]]; then
+  if [[ "$*" == "resolve --registry-config "*" "* ]]; then
+    if [[ "$4" == "registry.io/multiarch-test@sha256:xyz789" ]]; then
+      # Fixed digest for our new test's main image
+      echo "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    elif [[ "$4" == "registry.io/multiarch-test:sha256-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.src" ]]; then
+      # Fixed digest for our new test's .src image
+      echo "sha256:0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba"
+    elif [[ "$4" == *skip-image*.src || "$4" == *skip-image*-source ]]; then
       echo "sha256:000000"
     elif [[ "$4" == *skip-image* ]]; then
       echo "sha256:111111"
