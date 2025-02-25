@@ -773,6 +773,84 @@ spec:
         "${SIGNED_DIR}/sha256sum.txt.gpg"
 
         mv "$SHA_SUM_PATH" "${SIGNED_DIR}/sha256sum.txt"
+    - name: compress-artifacts
+      image: quay.io/konflux-ci/release-service-utils:7835e32b1974f956a6c942e24adbc79705cab12e
+      volumeMounts:
+        - name: shared-dir
+          mountPath: /shared
+      env:
+        - name: "SNAPSHOT_JSON"
+          value: "$(params.snapshot_json)"
+      script: |
+        #!/usr/bin/env bash
+        set -ex
+
+        STDERR_FILE=/tmp/stderr.txt
+
+        # Check if the previous step finished successfully. If not, stop here.
+        if [ "$(cat "$(results.result.path)")" != "Success" ]; then
+          echo "Previous step failed. Exiting..."
+          exit 0
+        fi
+
+        exitfunc() {
+            local err=$1
+            local line=$2
+            local command="$3"
+            if [ "$err" -eq 0 ] ; then
+                echo -n "Success" > "$(results.result.path)"
+            else
+                echo "$0: ERROR '$command' failed at line $line - exited with status $err" > "$(results.result.path)"
+                if [ -f "$STDERR_FILE" ] ; then
+                    tail -n 20 "$STDERR_FILE" | tee -a "$(results.result.path)"
+                fi
+            fi
+            exit 0 # exit the script cleanly as there is no point in proceeding past an error or exit call
+        }
+        # due to set -e, this catches all EXIT and ERR calls and the task should never fail with nonzero exit code
+        trap 'exitfunc $? $LINENO "$BASH_COMMAND"' EXIT
+
+        CONTENT_DIR=/shared/artifacts
+        SIGNED_DIR="$CONTENT_DIR/signed"
+        COMPRESSED_DIR="$CONTENT_DIR/compressed"
+
+        function compress_components {
+
+          mkdir -p "$COMPRESSED_DIR"
+          COMPONENT="$1"
+          NUM_MAPPED_FILES=$(jq '.staged.files | length' <<< "${COMPONENT}")
+          for ((i = 0; i < NUM_MAPPED_FILES; i++)) ; do
+            FILE=$(jq -c --arg i "$i" '.staged.files[$i|tonumber]' <<< "$COMPONENT")
+            SOURCE=$(jq -er '.source' <<< "$FILE") \
+              || (echo "Missing staged.files.source for component." && exit 1 )
+
+            case "${SOURCE}" in
+              (*darwin*)
+                DARWIN_FILE=$(find "${SIGNED_DIR}" -type f -name \*darwin\*)
+                tar -czf "${COMPRESSED_DIR}/${SOURCE}" -r "${DARWIN_FILE}"
+                rm -f "${DARWIN_FILE}"
+                ;;
+              (*linux*)
+                LINUX_FILE=$(find "${SIGNED_DIR}" -maxdepth 1 -type f -name \*linux\*)
+                tar -czf "${COMPRESSED_DIR}/${SOURCE}" -r "${LINUX_FILE}"
+                rm -f "${LINUX_FILE}"
+                ;;
+              (*windows*)
+                WINDOWS_FILE=$(find "${SIGNED_DIR}" -type f -name \*windows\*)
+                zip -r "${COMPRESSED_DIR}/${SOURCE}" "${WINDOWS_FILE}"
+                rm -f "${WINDOWS_FILE}"
+                ;;
+            esac
+          done
+        }
+
+        NUM_COMPONENTS=$(jq '.components | length' <<< "$SNAPSHOT_JSON")
+        for ((i = 0; i < NUM_COMPONENTS; i++)) ; do
+            COMPONENT=$(jq -c --arg i "$i" '.components[$i|tonumber]' <<< "$SNAPSHOT_JSON")
+            # eventually the function does not redirect the error to stderr, so looking for all output
+            compress_components "$COMPONENT" 2> "$STDERR_FILE"
+        done
+
     - name: push-artifacts
       image: quay.io/konflux-ci/release-service-utils:7835e32b1974f956a6c942e24adbc79705cab12e
       volumeMounts:
@@ -887,7 +965,7 @@ spec:
         echo "$UDC_KEY" > "$UDCACHE_KEY"
         set -x
 
-        DISK_IMAGE_DIR="/shared/artifacts/signed"
+        DISK_IMAGE_DIR="/shared/artifacts/compressed"
         export DISK_IMAGE_DIR
 
         process_component_for_developer_portal() { # Expected argument are [component json], [content_directory]
