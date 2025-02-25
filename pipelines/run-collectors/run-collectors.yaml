@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: run-collectors
   labels:
-    app.kubernetes.io/version: "0.2.0"
+    app.kubernetes.io/version: "0.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -31,6 +31,14 @@ spec:
       description: |
         The namespaced name of the resource that contains the collectors
       type: string
+    - name: collectorsRepository
+      type: string
+      description: Git repository where the collectors will be defined
+      default: https://github.com/konflux-ci/release-service-collectors.git
+    - name: collectorsRepositoryRevision
+      type: string
+      description: Git repository revision
+      default: development
     - name: taskGitUrl
       type: string
       description: The url to the git repo where the release-service-catalog tasks to be used are stored
@@ -50,7 +58,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/collect-collectors-resources/collect-collectors-resources.yaml
+            value: tasks/collectors/collect-collectors-resources/collect-collectors-resources.yaml
       params:
         - name: previousRelease
           value: $(params.previousRelease)
@@ -74,12 +82,16 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/run-collectors/run-collectors.yaml
+            value: tasks/collectors/run-collectors/run-collectors.yaml
       params:
         - name: collectorsPath
           value: $(tasks.collect-collectors-resources.results.collectorsResource)
         - name: collectorsResourceType
           value: $(params.collectorsResourceType)
+        - name: collectorsRepository
+          value: $(params.collectorsRepository)
+        - name: collectorsRepositoryRevision
+          value: $(params.collectorsRepositoryRevision)
         - name: resultsDir
           value: $(tasks.collect-collectors-resources.results.resultsDir)
       workspaces:
@@ -96,7 +108,7 @@ spec:
           - name: revision
             value: $(params.taskGitRevision)
           - name: pathInRepo
-            value: tasks/save-collectors-results/save-collectors-results.yaml
+            value: tasks/collectors/save-collectors-results/save-collectors-results.yaml
       params:
         - name: resourceType
           value: release
