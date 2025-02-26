@@ -177,7 +177,7 @@ spec:
             # Push the source image with the source tag here. The source image will be
             # pushed with the provided tags below in the loop
             push_image "${source_container_digest}" "${name}" "${sourceContainer}" \
-              "${repository}" "${source_tag}" "$platform"
+              "${repository}" "${source_tag}" ""
           fi
 
           for tag in $(jq -r '.[]' <<< "$imageTags") ; do
@@ -189,7 +189,7 @@ spec:
             # be pushed for this component
             if [ -n "${source_container_digest-}" ] ; then
               push_image "${source_container_digest}" "${name}" "${sourceContainer}" \
-                "${repository}" "${tag}-source" "$platform"
+                "${repository}" "${tag}-source" ""
             fi
           done
         done
