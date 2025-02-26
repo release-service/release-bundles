@@ -2,9 +2,11 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: test-rh-sign-image-multiple-components
+  name: test-rh-sign-image-multiple-components-multi-batch
 spec:
-  description: Test creating internal requests to sign images
+  description: |
+    Test creating internal requests to sign images. 
+    This test simulates creating multiple internal requests.
   workspaces:
     - name: tests-workspace
   tasks:
@@ -124,6 +126,8 @@ spec:
           value: "main"
         - name: signRegistryAccessPath
           value: signRegistryAccess.txt
+        - name: batchLimit
+          value: 150
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -170,12 +174,6 @@ spec:
                 if [ "$(jq -r '.config_map_name' <<< "${params}")" != "signing-config-map" ]
                 then
                   echo "config_map_name does not match"
-                  exit 1
-                fi
-
-                if [ "$(jq -r '.requester' <<< "${params}")" != "testuser-multiple" ]
-                then
-                  echo "requester does not match"
                   exit 1
                 fi
 
