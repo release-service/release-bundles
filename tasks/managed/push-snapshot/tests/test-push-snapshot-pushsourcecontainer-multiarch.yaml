@@ -1,10 +1,12 @@
+---
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: test-push-snapshot-pushsourcecontainer-multiarch
 spec:
   description: |
-    Test push-snapshot with a multi-architecture main image and source container to ensure .src resolves without platform args.
+    Test push-snapshot with a multi-architecture main image and source container to ensure .src
+     resolves and pushes without platform args.
   workspaces:
     - name: tests-workspace
   tasks:
@@ -37,7 +39,6 @@ spec:
                 ]
               }
               EOF
-
               cat > "$(workspaces.data.path)"/data.json << EOF
               {
                 "mapping": {}
@@ -88,19 +89,26 @@ spec:
                 cat "$(workspaces.data.path)"/cosign_expected_calls.txt
                 exit 1
               fi
-
-              # Check oras calls include .src resolution without platform
+              # Source .src resolution
               grep "resolve --registry-config .* registry.io/multiarch-test:sha256-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.src$" "$(workspaces.data.path)/mock_oras.txt" || {
-                echo "Error: .src resolution call missing or incorrect"
-                cat "$(workspaces.data.path)/mock_oras.txt"
-                exit 1
+                echo "Error: Source .src resolution call missing or incorrect"; exit 1
               }
-
-              # Fail if --platform appears in .src resolve
               if grep "resolve --registry-config .* --platform .* registry.io/multiarch-test:sha256-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.src" "$(workspaces.data.path)/mock_oras.txt"; then
-                echo "Error: .src resolution should not use --platform"
-                cat "$(workspaces.data.path)/mock_oras.txt"
-                exit 1
+                echo "Error: Source .src resolution should not use --platform"; exit 1
+              fi
+              # Initial .src push (line 180)
+              grep "resolve --registry-config .* prod-registry.io/prod-location:sha256-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.src$" "$(workspaces.data.path)/mock_oras.txt" || {
+                echo "Error: Initial .src push call missing or incorrect"; exit 1
+              }
+              if grep "resolve --registry-config .* --platform .* prod-registry.io/prod-location:sha256-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.src" "$(workspaces.data.path)/mock_oras.txt"; then
+                echo "Error: Initial .src push should not use --platform"; exit 1
+              fi
+              # Tagged .src push (line 192)
+              grep "resolve --registry-config .* prod-registry.io/prod-location:multi-tag-source$" "$(workspaces.data.path)/mock_oras.txt" || {
+                echo "Error: Tagged .src push call missing or incorrect"; exit 1
+              }
+              if grep "resolve --registry-config .* --platform .* prod-registry.io/prod-location:multi-tag-source" "$(workspaces.data.path)/mock_oras.txt"; then
+                echo "Error: Tagged .src push should not use --platform"; exit 1
               fi
       runAfter:
         - run-task
