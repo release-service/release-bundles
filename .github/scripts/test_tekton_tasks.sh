@@ -141,7 +141,7 @@ do
     else
       workSpaceParams="emptyDir="""
     fi
-    PIPELINERUN=$(tkn p start $TEST_NAME -p ociStorage=${TRUSTED_ARTIFACT_OCI_STORAGE} -w "name=tests-workspace,${workSpaceParams}" -o json | jq -r '.metadata.name')
+    PIPELINERUN=$(tkn p start --use-param-defaults $TEST_NAME -p ociStorage=${TRUSTED_ARTIFACT_OCI_STORAGE} -w "name=tests-workspace,${workSpaceParams}" -o json | jq -r '.metadata.name')
 
     echo "  Started pipelinerun $PIPELINERUN"
     sleep 1  # allow a second for the pr object to appear (including a status condition)

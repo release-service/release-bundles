@@ -59,9 +59,6 @@ spec:
     - name: taskGitRevision
       type: string
       description: The revision in the taskGitUrl repo to be used
-    - name: ociStorage
-      type: string
-      default: "empty"
   workspaces:
     - name: release-workspace
   tasks:
@@ -88,9 +85,8 @@ spec:
           value: $(params.snapshot)
         - name: requireInternalServices
           value: "true"
-        - name: ociStorage
-          value: $(params.ociStorage)
     - name: collect-data
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -113,14 +109,13 @@ spec:
           value: $(params.snapshot)
         - name: subdirectory
           value: $(context.pipelineRun.uid)
-        - name: ociStorage
-          value: $(params.ociStorage)
       workspaces:
         - name: data
           workspace: release-workspace
       runAfter:
         - verify-access-to-resources
     - name: reduce-snapshot
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       taskRef:
         resolver: "git"
         params:
@@ -141,12 +136,6 @@ spec:
           value: $(tasks.collect-data.results.snapshotNamespace)
         - name: SNAPSHOT_PATH
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
-        - name: ociStorage
-          value: $(params.ociStorage)
-        - name: sourceDataArtifact
-          value: "$(tasks.collect-data.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
-        - name: subdirectory
-          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace
@@ -180,6 +169,7 @@ spec:
       runAfter:
         - verify-access-to-resources
     - name: apply-mapping
+      timeout: "4h"  # temp workaround until github.com/konflux-ci/release-service/issues/603 is fixed
       retries: 3
       taskRef:
         resolver: "git"
@@ -197,12 +187,6 @@ spec:
           value: "$(tasks.collect-data.results.data)"
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
-        - name: ociStorage
-          value: $(params.ociStorage)
-        - name: sourceDataArtifact
-          value: "$(tasks.reduce-snapshot.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
-        - name: subdirectory
-          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace
