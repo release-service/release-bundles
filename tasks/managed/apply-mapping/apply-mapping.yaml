@@ -33,6 +33,7 @@ spec:
       default: "1d"
     - name: sourceDataArtifact
       type: string
+      default: ""
     - name: subdirectory
       description: Subdirectory inside the workspace to be used
       type: string
