@@ -8,6 +8,10 @@ spec:
     Run the collect-data task and verify that the pipeline ref info is made available
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -108,6 +112,8 @@ spec:
           value: default/snapshot-sample
         - name: subdirectory
           value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
       workspaces:
@@ -117,6 +123,10 @@ spec:
       params:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.run-task.results.subdirectory)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -126,9 +136,22 @@ spec:
         params:
           - name: releasePipelineMetadata
             type: string
+          - name: subdirectory
+            type: string
+          - name: sourceDataArtifact
+            type: string
         workspaces:
           - name: data
         steps:
+          - name: use-trusted-artifact
+            args:
+              - use
+              - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
+            env:
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+            computeResources: {}
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             env:
@@ -138,9 +161,9 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              if [ "$(wc -l < "$(workspaces.data.path)/mock_curl.txt")" != 1 ]; then
+              if [ "$(wc -l < "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt")" != 1 ]; then
                 echo Error: curl was expected to be called 1 time. Actual calls:
-                cat "$(workspaces.data.path)/mock_curl.txt"
+                cat "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
                 exit 1
               fi
 

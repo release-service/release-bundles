@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: collect-data
   labels:
-    app.kubernetes.io/version: "4.5.3"
+    app.kubernetes.io/version: "4.6.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -32,6 +32,15 @@ spec:
       description: Subdirectory inside the workspace to be used
       type: string
       default: ""
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
+      default: "empty"
+    - name: ociArtifactExpiresAfter
+      description: Expiration date for the trusted artifacts created in the
+        OCI repository. An empty string means the artifacts do not expire.
+      type: string
+      default: "1d"
   workspaces:
     - name: data
       description: Workspace to save the CR jsons to
@@ -72,6 +81,12 @@ spec:
     - name: releasePipelineMetadata
       type: string
       description: json object containing git resolver metadata about the running release pipeline
+    - description: Produced trusted data artifact
+      name: sourceDataArtifact
+      type: string
+    - description: Subdirectory inside the workspace to be used
+      name: subdirectory
+      type: string
   steps:
     - name: collect-data
       image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
@@ -90,13 +105,24 @@ spec:
         #!/usr/bin/env bash
         set -eo pipefail
 
+        set -x
+        echo -n "$(params.subdirectory)" > "$(results.subdirectory.path)"
+
         RESULTS_DIR_PATH="results"
         if [ -n "$(params.subdirectory)" ]; then
           mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
+          if [ "$(params.ociStorage)" == "empty" ]; then
+            echo "oci storage not detected via params.ociStorage ... skipping trusted artifacts tasks"
+            touch "$(workspaces.data.path)/$(params.subdirectory)/.skip-trusted-artifacts"
+
+            # this is needed to skip trusted-artifacts tasks
+            # when using PVC based workspaces.
+            echo -n "$(params.ociStorage)" > "$(results.sourceDataArtifact.path)"
+          fi
           RESULTS_DIR_PATH="$(params.subdirectory)/results"
         fi
 
-        mkdir "$(workspaces.data.path)/$RESULTS_DIR_PATH"
+        mkdir -p "$(workspaces.data.path)/$RESULTS_DIR_PATH"
         echo -n "$RESULTS_DIR_PATH" > "$(results.resultsDir.path)"
 
         RELEASE_PATH="$(params.subdirectory)/release.json"
@@ -246,3 +272,18 @@ spec:
         echo "${json}" > "$(results.releasePipelineMetadata.path)"
         # pretty print for log message
         jq . <<< "$json"
+    - name: create-trusted-artifact
+      args:
+        - create
+        - --store
+        - $(params.ociStorage)
+        - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/$(params.subdirectory)
+      computeResources: {}
+      image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+      env:
+        - name: IMAGE_EXPIRES_AFTER
+          value: $(params.ociArtifactExpiresAfter)
+        - name: "ORAS_OPTIONS"
+          value: "--insecure"
+        - name: "HOME"
+          value: "/tekton/home"

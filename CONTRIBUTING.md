@@ -281,9 +281,20 @@ Requirements:
 
     ```kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml```
 
+* Local Registry is installed in the Cluster
+
+    ```.github/scripts/deploy_registry.sh```
+
 * tkn cli installed ([docs](https://tekton.dev/docs/cli/))
 
 * jq installed
+
+* Environment variable set:
+
+```
+export TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH=/tmp/.dockerconfig.json
+export TRUSTED_ARTIFACT_OCI_STORAGE=registry-service.kind-registry/trusted-artifacts
+```
 
 Once you have everything ready, you can run the test script and pass task version directories
 as arguments, e.g.

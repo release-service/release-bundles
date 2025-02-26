@@ -2,15 +2,15 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: push-disk-images-to-cdn
+  name: rh-advisories
   labels:
-    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/version: "1.8.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
 spec:
   description: >-
-    Tekton Pipeline to push disk images to a cdn using pulp
+    Tekton pipeline to release content to registry.redhat.io and create an advisory
   params:
     - name: release
       type: string
@@ -40,7 +40,15 @@ spec:
     - name: enterpriseContractTimeout
       type: string
       description: Timeout setting for `ec validate`
-      default: 10m0s
+      default: 8h0m0s
+    - name: enterpriseContractWorkerCount
+      type: string
+      description: Number of parallel workers for policy evaluation
+      default: 4
+    - name: postCleanUp
+      type: string
+      description: Cleans up workspace after finishing executing the pipeline
+      default: "true"
     - name: verify_ec_task_bundle
       type: string
       description: The location of the bundle containing the verify-enterprise-contract task
@@ -51,10 +59,9 @@ spec:
     - name: taskGitRevision
       type: string
       description: The revision in the taskGitUrl repo to be used
-    - name: postCleanUp
+    - name: ociStorage
       type: string
-      description: Cleans up workspace after finishing executing the pipeline
-      default: "true"
+      default: "quay.io/scoheb/trusted-artifacts"
   workspaces:
     - name: release-workspace
   tasks:
@@ -79,8 +86,10 @@ spec:
           value: $(params.releaseServiceConfig)
         - name: snapshot
           value: $(params.snapshot)
-        - name : requireInternalServices
+        - name: requireInternalServices
           value: "true"
+        - name: ociStorage
+          value: $(params.ociStorage)
     - name: collect-data
       taskRef:
         resolver: "git"
@@ -104,6 +113,8 @@ spec:
           value: $(params.snapshot)
         - name: subdirectory
           value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       workspaces:
         - name: data
           workspace: release-workspace
@@ -130,12 +141,46 @@ spec:
           value: $(tasks.collect-data.results.snapshotNamespace)
         - name: SNAPSHOT_PATH
           value: $(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)
+        - name: ociStorage
+          value: $(params.ociStorage)
+        - name: sourceDataArtifact
+          value: "$(tasks.collect-data.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace
       runAfter:
         - collect-data
+    - name: extract-requester-from-release
+      taskRef:
+        resolver: "git"
+        params:
+          - name: url
+            value: $(params.taskGitUrl)
+          - name: revision
+            value: $(params.taskGitRevision)
+          - name: pathInRepo
+            value: hub/kubernetes-actions/kubernetes-actions.yaml
+      params:
+        - name: image
+          value: "quay.io/hacbs-release/cloud-builders-kubectl\
+            @sha256:8ab94be8b2b4f3d117f02d868b39540fddd225447abf4014f7ba4765cb39f753"
+        - name: script
+          value: |
+            set -x
+
+            NAMESPACE=$(echo $(params.release) | cut -d '/' -f 1)
+            NAME=$(echo $(params.release) | cut -d '/' -f 2)
+
+            AUTHOR=$(kubectl get release ${NAME} -n ${NAMESPACE} \
+            -o=jsonpath='{.status.attribution.author}' | tee $(results.output-result.path))
+
+            if [[ ${AUTHOR} == "" ]] ; then exit 1 ; fi
+      runAfter:
+        - verify-access-to-resources
     - name: apply-mapping
+      retries: 3
       taskRef:
         resolver: "git"
         params:
@@ -152,133 +197,14 @@ spec:
           value: "$(tasks.collect-data.results.data)"
         - name: snapshotPath
           value: "$(tasks.collect-data.results.snapshotSpec)"
+        - name: ociStorage
+          value: $(params.ociStorage)
+        - name: sourceDataArtifact
+          value: "$(tasks.reduce-snapshot.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.collect-data.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.collect-data.results.subdirectory)
       workspaces:
         - name: data
           workspace: release-workspace
       runAfter:
         - reduce-snapshot
-    - name: verify-enterprise-contract
-      taskRef:
-        resolver: "bundles"
-        params:
-          - name: bundle
-            value: $(params.verify_ec_task_bundle)
-          - name: kind
-            value: task
-          - name: name
-            value: verify-enterprise-contract
-      params:
-        - name: IMAGES
-          value: "$(workspaces.data.path)/$(tasks.collect-data.results.snapshotSpec)"
-        - name: SSL_CERT_DIR
-          value: /var/run/secrets/kubernetes.io/serviceaccount
-        - name: POLICY_CONFIGURATION
-          value: $(params.enterpriseContractPolicy)
-        - name: STRICT
-          value: "1"
-        - name: IGNORE_REKOR
-          value: "true"
-        - name: EXTRA_RULE_DATA
-          value: $(params.enterpriseContractExtraRuleData)
-        - name: TIMEOUT
-          value: $(params.enterpriseContractTimeout)
-      workspaces:
-        - name: data
-          workspace: release-workspace
-      runAfter:
-        - apply-mapping
-    - name: check-data-keys
-      params:
-        - name: dataPath
-          value: "$(tasks.collect-data.results.data)"
-        - name: schema
-          value:  $(params.taskGitUrl)/raw/$(params.taskGitRevision)/schema/dataKeys.json
-        - name: systems
-          value:
-            - cdn
-      taskRef:
-        params:
-          - name: url
-            value: $(params.taskGitUrl)
-          - name: revision
-            value: $(params.taskGitRevision)
-          - name: pathInRepo
-            value: tasks/managed/check-data-keys/check-data-keys.yaml
-        resolver: git
-      workspaces:
-        - name: data
-          workspace: release-workspace
-      runAfter:
-        - collect-data
-    - name: push-disk-images
-      timeout: "2h00m0s"
-      when:
-        - input: "$(tasks.apply-mapping.results.mapped)"
-          operator: in
-          values: ["true"]
-      taskRef:
-        resolver: "git"
-        params:
-          - name: url
-            value: $(params.taskGitUrl)
-          - name: revision
-            value: $(params.taskGitRevision)
-          - name: pathInRepo
-            value: tasks/managed/push-disk-images/push-disk-images.yaml
-      params:
-        - name: dataPath
-          value: "$(tasks.collect-data.results.data)"
-        - name: snapshotPath
-          value: "$(tasks.collect-data.results.snapshotSpec)"
-        - name: pipelineRunUid
-          value: $(context.pipelineRun.uid)
-        - name: resultsDirPath
-          value: "$(tasks.collect-data.results.resultsDir)"
-      workspaces:
-        - name: data
-          workspace: release-workspace
-      runAfter:
-        - check-data-keys
-    - name: update-cr-status
-      params:
-        - name: resource
-          value: $(params.release)
-        - name: resultsDirPath
-          value: $(tasks.collect-data.results.resultsDir)
-      taskRef:
-        resolver: "git"
-        params:
-          - name: url
-            value: $(params.taskGitUrl)
-          - name: revision
-            value: $(params.taskGitRevision)
-          - name: pathInRepo
-            value: tasks/managed/update-cr-status/update-cr-status.yaml
-      workspaces:
-        - name: data
-          workspace: release-workspace
-      runAfter:
-        - push-disk-images
-  finally:
-    - name: cleanup
-      taskRef:
-        resolver: "git"
-        params:
-          - name: url
-            value: $(params.taskGitUrl)
-          - name: revision
-            value: $(params.taskGitRevision)
-          - name: pathInRepo
-            value: tasks/managed/cleanup-workspace/cleanup-workspace.yaml
-      when:
-        - input: $(params.postCleanUp)
-          operator: in
-          values: ["true"]
-      params:
-        - name: subdirectory
-          value: "$(context.pipelineRun.uid)"
-        - name: pipelineRunUid
-          value: $(context.pipelineRun.uid)
-      workspaces:
-        - name: input
-          workspace: release-workspace

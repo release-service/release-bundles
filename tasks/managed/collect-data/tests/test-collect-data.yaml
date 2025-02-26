@@ -8,6 +8,10 @@ spec:
     Run the collect-data task and verify that all resources are stored in the workspace.
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -105,6 +109,8 @@ spec:
           value: default/snapshot-sample
         - name: subdirectory
           value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
       workspaces:
@@ -132,6 +138,10 @@ spec:
           value: $(tasks.run-task.results.snapshotName)
         - name: snapshotNamespace
           value: $(tasks.run-task.results.snapshotNamespace)
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.run-task.results.subdirectory)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -159,9 +169,22 @@ spec:
             type: string
           - name: snapshotNamespace
             type: string
+          - name: sourceDataArtifact
+            type: string
+          - name: subdirectory
+            type: string
         workspaces:
           - name: data
         steps:
+          - name: use-trusted-artifact
+            args:
+              - use
+              - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
+            env:
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+            computeResources: {}
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
@@ -169,7 +192,7 @@ spec:
               set -eux
 
               echo Test that the results directory was created
-              test -d "$(workspaces.data.path)/$(resultsDir)"
+              test -d "$(workspaces.data.path)/$(params.resultsDir)"
 
               echo Test that Release CR was saved to workspace
               test "$(jq -r '.metadata.name' < "$(workspaces.data.path)/$(params.release)")" == release-sample

@@ -6,6 +6,10 @@ metadata:
   annotations:
     test/assert-task-failure: "run-task"
 spec:
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   description: |
     Run the collect-data task with the disallowed key product_id in the Release data.
   workspaces:
@@ -124,8 +128,8 @@ spec:
           value: default/releaseserviceconfig-disallowed-release-sample
         - name: snapshot
           value: default/snapshot-disallowed-release-sample
-        - name: subdirectory
-          value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       workspaces:
         - name: data
           workspace: tests-workspace

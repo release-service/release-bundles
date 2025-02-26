@@ -18,14 +18,19 @@ should not be present in the Release data section).
 
 ## Parameters
 
-| Name                 | Description                                        | Optional | Default value |
-|----------------------|----------------------------------------------------|----------|---------------|
-| release              | Namespaced name of the Release                     | No       | -             |
-| releasePlan          | Namespaced name of the ReleasePlan                 | No       | -             |
-| releasePlanAdmission | Namespaced name of the ReleasePlanAdmission        | No       | -             |
-| releaseServiceConfig | Namespaced name of the ReleaseServiceConfig        | No       | -             |
-| snapshot             | Namespaced name of the Snapshot                    | No       | -             |
-| subdirectory         | Subdirectory inside the workspace to be used.      | Yes      | -             |
+| Name                    | Description                                                                                                                 | Optional | Default value |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------|----------|---------------|
+| release                 | Namespaced name of the Release                                                                                              | No       | -             |
+| releasePlan             | Namespaced name of the ReleasePlan                                                                                          | No       | -             |
+| releasePlanAdmission    | Namespaced name of the ReleasePlanAdmission                                                                                 | No       | -             |
+| releaseServiceConfig    | Namespaced name of the ReleaseServiceConfig                                                                                 | No       | -             |
+| snapshot                | Namespaced name of the Snapshot                                                                                             | No       | -             |
+| subdirectory            | Subdirectory inside the workspace to be used                                                                                | No       | -             |
+| ociStorage              | The OCI repository where the Trusted Artifacts are stored.                                                                  | No       | -             |
+| ociArtifactExpiresAfter | Expiration date for the trusted artifacts created in the OCI repository. An empty string means the artifacts do not expire. | Yes      | 1d            |
+
+## Changes in 4.6.0
+* This task now supports Trusted artifacts
 
 ## Changes in 4.5.3
 * Introduce new step to collect, print and record information about the git resolver metadata for the

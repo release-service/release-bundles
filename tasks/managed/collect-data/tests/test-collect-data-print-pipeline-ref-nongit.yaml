@@ -9,6 +9,10 @@ spec:
     git resolver
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
       taskSpec:
@@ -113,6 +117,8 @@ spec:
           value: default/snapshot-sample
         - name: subdirectory
           value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
       runAfter:
         - setup
       workspaces:
@@ -122,6 +128,10 @@ spec:
       params:
         - name: releasePipelineMetadata
           value: "$(tasks.run-task.results.releasePipelineMetadata)"
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(tasks.run-task.results.subdirectory)"
+        - name: subdirectory
+          value: $(tasks.run-task.results.subdirectory)
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -130,6 +140,8 @@ spec:
       taskSpec:
         params:
           - name: releasePipelineMetadata
+            type: string
+          - name: subdirectory
             type: string
         workspaces:
           - name: data
@@ -143,10 +155,11 @@ spec:
               #!/usr/bin/env bash
               set -eux
 
-              touch "$(workspaces.data.path)/mock_curl.txt"
-              if [ "$(wc -l < "$(workspaces.data.path)/mock_curl.txt")" != 0 ]; then
+              mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
+              touch "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
+              if [ "$(wc -l < "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt")" != 0 ]; then
                 echo Error: curl was expected to be called 0 times. Actual calls:
-                cat "$(workspaces.data.path)/mock_curl.txt"
+                cat "$(workspaces.data.path)/$(params.subdirectory)/mock_curl.txt"
                 exit 1
               fi
               

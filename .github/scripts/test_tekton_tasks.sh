@@ -22,6 +22,26 @@ shopt -s nullglob
 
 WORKSPACE_TEMPLATE=${BASH_SOURCE%/*/*}/resources/workspace-template.yaml
 
+if [ -z "${USE_TRUSTED_ARTIFACTS}" ]
+then
+  echo "Defaulting to PVC based workspaces..."
+  # empty is needed since trusted-artifacts needs a non-empty storage
+  # parameter in order to reach the skipping logic
+  export TRUSTED_ARTIFACT_OCI_STORAGE="empty"
+else
+
+  echo "Using Trusted Artifacts for workspaces..."
+  export TRUSTED_ARTIFACT_OCI_STORAGE=registry-service.kind-registry/trusted-artifacts
+  export TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH=/tmp/.dockerconfig.json
+
+  kubectl create secret generic docker-config \
+    --from-file=.dockerconfigjson="${TRUSTED_ARTIFACT_OCI_DOCKER_CONFIG_JSON_PATH}" \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -
+  kubectl patch serviceaccount default -p \
+    '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
+
+fi
+
 if [ $# -gt 0 ]
 then
   TEST_ITEMS=$@
@@ -116,7 +136,13 @@ do
       sleep 5
     done
 
-    PIPELINERUN=$(tkn p start $TEST_NAME -w name=tests-workspace,volumeClaimTemplateFile=$WORKSPACE_TEMPLATE -o json | jq -r '.metadata.name')
+    if [ -z "${USE_TRUSTED_ARTIFACTS}" ]; then
+      workSpaceParams="volumeClaimTemplateFile=$WORKSPACE_TEMPLATE"
+    else
+      workSpaceParams="emptyDir="""
+    fi
+    PIPELINERUN=$(tkn p start --use-param-defaults $TEST_NAME -p ociStorage=${TRUSTED_ARTIFACT_OCI_STORAGE} -w "name=tests-workspace,${workSpaceParams}" -o json | jq -r '.metadata.name')
+
     echo "  Started pipelinerun $PIPELINERUN"
     sleep 1  # allow a second for the pr object to appear (including a status condition)
     while [ "$(kubectl get pr $PIPELINERUN -o=jsonpath='{.status.conditions[0].status}')" == "Unknown" ]

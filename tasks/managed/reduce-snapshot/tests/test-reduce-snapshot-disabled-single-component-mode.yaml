@@ -8,9 +8,22 @@ spec:
     Run the reduce snapshot task with single component mode being false
   workspaces:
     - name: tests-workspace
+  params:
+    - name: ociStorage
+      description: The OCI repository where the Trusted Artifacts are stored.
+      type: string
   tasks:
     - name: setup
+      params:
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
       taskSpec:
+        params:
+          - name: subdirectory
+            type: string
+        results:
+          - name: sourceDataArtifact
+            type: string
         steps:
           - name: create-crs
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
@@ -36,9 +49,45 @@ spec:
                     containerImage: newimage2
               EOF
               kubectl apply -f snapshot
-              
-              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee "$(workspaces.data.path)/snapshot.json"
-              chmod 666 "$(workspaces.data.path)/snapshot.json"
+
+              mkdir -p "$(workspaces.data.path)/$(params.subdirectory)"
+              kubectl get snapshot/snapshot-sample -ojson | jq .spec | tee \
+                "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
+              chmod 666 "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
+          - name: skip-trusted-artifact-operations
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eo pipefail
+      
+              if [ "$(params.ociStorage)" == "empty" ]; then
+                echo "oci storage not detected via params.ociStorage ... skipping trusted artifacts tasks"
+                touch "$(workspaces.data.path)/$(params.subdirectory)/.skip-trusted-artifacts"
+              fi
+          - name: create-trusted-artifact
+            args:
+              - create
+              - --store
+              - $(params.ociStorage)
+              - $(results.sourceDataArtifact.path)=$(workspaces.data.path)/$(params.subdirectory)
+            computeResources: { }
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
+            env:
+              - name: IMAGE_EXPIRES_AFTER
+                value: 1d
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+          - name: patch-source-data-artifact-result
+            image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
+            script: |
+              #!/usr/bin/env bash
+              set -eu
+      
+              # this is needed to skip trusted-artifacts tasks
+              # when using PVC based workspaces.
+              if [ "$(params.ociStorage)" == "empty" ]; then
+                echo -n "$(params.ociStorage)" > "$(results.sourceDataArtifact.path)"
+              fi
       workspaces:
         - name: data
           workspace: tests-workspace
@@ -47,7 +96,7 @@ spec:
         name: reduce-snapshot
       params:
         - name: SNAPSHOT
-          value: $(workspaces.data.path)/snapshot.json
+          value: $(workspaces.data.path)/$(context.pipelineRun.uid)/snapshot.json
         - name: SINGLE_COMPONENT
           value: false
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE
@@ -55,7 +104,13 @@ spec:
         - name: SINGLE_COMPONENT_CUSTOM_RESOURCE_NS
           value: default
         - name: SNAPSHOT_PATH
-          value: $(workspaces.data.path)/snapshot.json
+          value: $(workspaces.data.path)/$(context.pipelineRun.uid)/snapshot.json
+        - name: subdirectory
+          value: $(context.pipelineRun.uid)
+        - name: ociStorage
+          value: $(params.ociStorage)
+        - name: sourceDataArtifact
+          value: "$(tasks.setup.results.sourceDataArtifact)=$(workspaces.data.path)/$(context.pipelineRun.uid)"
       runAfter:
         - setup
       workspaces:
@@ -65,20 +120,40 @@ spec:
       workspaces:
         - name: data
           workspace: tests-workspace
+      params:
+        - name: sourceDataArtifact
+          value: "$(tasks.run-task.results.sourceDataArtifact)=$(workspaces.data.path)/$(context.pipelineRun.uid)"
+        - name: subdirectory
+          value: "$(context.pipelineRun.uid)"
       runAfter:
         - run-task
       taskSpec:
         workspaces:
           - name: data
+        params:
+          - name: sourceDataArtifact
+            type: string
+          - name: subdirectory
+            type: string
         steps:
+          - name: use-trusted-artifact
+            args:
+              - use
+              - $(params.sourceDataArtifact)=$(workspaces.data.path)/$(params.subdirectory)
+            env:
+              - name: "ORAS_OPTIONS"
+                value: "--insecure"
+            computeResources: {}
+            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:ff35e09ff5c89e54538b50abae241a765b2b7868f05d62c4835bebf0978f3659
           - name: check-result
             image: quay.io/konflux-ci/release-service-utils:e633d51cd41d73e4b3310face21bb980af7a662f
             script: |
               #!/usr/bin/env bash
               set -eux
 
-              cat "$(workspaces.data.path)/snapshot.json"
-              if [ "$(jq '.components | length' < "$(workspaces.data.path)/snapshot.json")" -ne 2 ]; then
+              cat "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json"
+              if [ "$(jq '.components | length' < "$(workspaces.data.path)/$(params.subdirectory)/snapshot.json")" \
+                -ne 2 ]; then
                 echo "ERROR: Resulting snapshot does not contain 2 components"
                 exit 1
               fi
