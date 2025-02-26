@@ -4,7 +4,7 @@ kind: Task
 metadata:
   name: create-advisory-task
   labels:
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "1.0.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/tags: release
@@ -128,10 +128,55 @@ spec:
           # This also cds into the git repo
           git_clone_and_checkout --repository "$GIT_REPO" --revision "$REPO_BRANCH"
 
-          # Inject signing key into ADVISORY_JSON
+          CONTENT_IMAGES=$(echo "$ADVISORY_JSON" | jq -c '.content.images' || echo "[]")
+
+          # Use ISO 8601 format in UTC/Zulu time, e.g. 2024-03-06T17:27:38Z
+          SHIP_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          YEAR=${SHIP_DATE%%-*} # derive the year from the ship date
+          # Define advisory directory
+          ADVISORY_BASE_DIR="advisories/data/advisories/$(params.origin)/${YEAR}"
+          echo "Checking advisories in directory: ${ADVISORY_BASE_DIR}"
+          # Check existing advisories
+          EXISTING_ADVISORIES=$(
+            git ls-tree --name-only origin/main "${ADVISORY_BASE_DIR}/" 2>/dev/null |
+            grep -oE '[0-9]{4,6}$' |
+            sort -nr || true
+          )
+
+          if [[ -z "$EXISTING_ADVISORIES" ]]; then
+              echo "No existing advisories found."
+          fi
+
+          for ADVISORY_NUM in $EXISTING_ADVISORIES; do
+              ADVISORY_FILE="${ADVISORY_BASE_DIR}/${ADVISORY_NUM}/advisory.yaml"
+              EXISTING_CONTENT=$(
+                git show origin/main:"${ADVISORY_FILE}" | 
+                yq -o=json '.' | 
+                jq -c '.spec.content.images' 2>/dev/null || echo "[]"
+              )
+
+              FILTERED_IMAGES=$(echo "$CONTENT_IMAGES" | jq --argjson existing "$EXISTING_CONTENT" '
+                map(select(
+                  .containerImage as $ci | 
+                  .tags as $tags |
+                  $existing | map(select(.containerImage == $ci and .tags == $tags)) | length == 0
+                ))')
+              
+              if [[ -z "$FILTERED_IMAGES" || "$FILTERED_IMAGES" == "[]" ]]; then
+                  echo "Matching advisory exists: ${ADVISORY_FILE}. Skipping creation."
+                  ADVISORY_URL="${GIT_REPO//\.git/}/-/blob/main/${ADVISORY_FILE}"
+                  echo -n "Success" > "$(results.result.path)"
+                  echo -n "${ADVISORY_URL}" > "$(results.advisory_url.path)"
+                  exit 0
+              fi
+          done
+
+          NEW_ADVISORY_JSON=$(echo "$ADVISORY_JSON" | jq --argjson new_images "$FILTERED_IMAGES" \
+            '.content.images = $new_images')
+
           signingKey=$(kubectl get configmap "$(params.config_map_name)" -o jsonpath="{.data.SIG_KEY_NAME}")
           advisoryJsonWithKey=$(jq -c --arg key "$signingKey" \
-            '.content.images[] += {"signingKey": $key}' <<< "$ADVISORY_JSON")
+            '.content.images[] += {"signingKey": $key}' <<< "$NEW_ADVISORY_JSON")
 
           # write keytab to file
           echo -n "${SERVICE_ACCOUNT_KEYTAB}" | base64 --decode > /tmp/keytab
@@ -147,9 +192,6 @@ spec:
           ID=$(curl --retry 3 --negotiate -u : "${ERRATA_API}/advisory/reserve_live_id" -XPOST | jq -r '.live_id')
           ADVISORY_NUM=$(printf "%04d" "$ID")
 
-          # Use ISO 8601 format in UTC/Zulu time, e.g. 2024-03-06T17:27:38Z
-          SHIP_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          YEAR=${SHIP_DATE%%-*} # derive the year from the ship date
           # group advisories by <origin workspace>/year
           ADVISORY_DIR="data/advisories/$(params.origin)/${YEAR}/${ADVISORY_NUM}"
           mkdir -p "${ADVISORY_DIR}"
